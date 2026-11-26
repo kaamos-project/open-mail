@@ -1,8 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- IMAP e SMTP: l'app parla direttamente con il server di posta. -->
+    <!-- IMAP and SMTP: the app talks directly to the mail server. -->
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- allowBackup falso: la cache delle mail e le chiavi del portachiavi
-         non finiscono nei backup cloud di Google (privacy prima di tutto). -->
+    <!-- allowBackup false: the mail cache and the keychain keys never end
+         up in Google's cloud backups (privacy first). -->
     <application
         android:label="Kaamos Mail"
         android:allowBackup="false"

@@ -2,16 +2,16 @@ import 'package:html/parser.dart' as html_parser;
 
 import 'models.dart';
 
-/// Funzioni pure sul testo: niente rete, niente UI. Per questo sono le più
-/// facili da testare (vedi `test/text_utils_test.dart`).
+/// Pure text functions: no network, no UI. That makes them the easiest to test
+/// (see `test/text_utils_test.dart`).
 
-/// Riduce un testo all'anteprima di una riga: niente citazioni, spazi
-/// compressi, al massimo [maxLength] caratteri.
+/// Reduces a text to a one-line preview: no quotes, collapsed whitespace, at
+/// most [maxLength] characters.
 String makePreview(String text, {int maxLength = 160}) {
   final lines = text
       .split(RegExp(r'\r?\n'))
       .map((l) => l.trim())
-      // Le righe citate ("> ...") e le firme non dicono niente di nuovo.
+      // Quoted lines ("> ...") and signatures say nothing new.
       .takeWhile((l) => l != '--' && l != '-- ')
       .where((l) => l.isNotEmpty && !l.startsWith('>'));
   final joined = lines.join(' ').replaceAll(RegExp(r'\s+'), ' ').trim();
@@ -19,8 +19,8 @@ String makePreview(String text, {int maxLength = 160}) {
   return '${joined.substring(0, maxLength).trimRight()}…';
 }
 
-/// Il testo visibile di un HTML, per le anteprime. Non serve a mostrare il
-/// messaggio (per quello c'è la WebView).
+/// The visible text of an HTML document, for previews. Not used to show the
+/// message (the WebView does that).
 String htmlToText(String html) {
   final document = html_parser.parse(html);
   document
@@ -35,7 +35,7 @@ String htmlToText(String html) {
   return (document.body?.text ?? '').replaceAll(' ', ' ');
 }
 
-/// Mette tra virgolette una stringa per un comando IMAP SEARCH.
+/// Quotes a string for an IMAP SEARCH command.
 String imapQuote(String value) {
   final escaped = value
       .replaceAll(RegExp(r'[\r\n]'), ' ')
@@ -44,7 +44,7 @@ String imapQuote(String value) {
   return '"$escaped"';
 }
 
-/// Toglie `<` e `>` da un Content-ID o Message-ID.
+/// Strips `<` and `>` from a Content-ID or Message-ID.
 String stripAngles(String value) {
   var v = value.trim();
   if (v.startsWith('<')) v = v.substring(1);
@@ -52,7 +52,7 @@ String stripAngles(String value) {
   return v;
 }
 
-/// Gli id in un header `References` o `In-Reply-To`.
+/// The ids in a `References` or `In-Reply-To` header.
 List<String> parseMessageIds(String? header) {
   if (header == null) return const [];
   return [
@@ -60,15 +60,15 @@ List<String> parseMessageIds(String? header) {
   ];
 }
 
-/// Ordine delle cartelle: prima quelle speciali in un ordine fisso, poi le
-/// altre in ordine alfabetico.
+/// Folder order: special folders first in a fixed order, then the others
+/// alphabetically.
 int compareFolders(Folder a, Folder b) {
   final byRole = a.role.index.compareTo(b.role.index);
   if (byRole != 0) return byRole;
   return a.path.toLowerCase().compareTo(b.path.toLowerCase());
 }
 
-/// Nome italiano delle cartelle speciali.
+/// Italian name of the special folders.
 String folderLabel(Folder folder) => switch (folder.role) {
   FolderRole.inbox => 'Posta in arrivo',
   FolderRole.sent => 'Inviati',
@@ -79,11 +79,11 @@ String folderLabel(Folder folder) => switch (folder.role) {
   FolderRole.other => folder.name,
 };
 
-/// Interpreta una lista di indirizzi scritta a mano:
-/// `marta@esempio.org, Luca <luca@esempio.org>`.
+/// Parses a hand-written address list:
+/// `marta@example.org, Luca <luca@example.org>`.
 ///
-/// Restituisce gli indirizzi validi e le parti che non lo sono, così la UI
-/// può segnalare l'errore invece di inviare a un indirizzo sbagliato.
+/// Returns the valid addresses and the parts that aren't, so the UI can flag
+/// the error instead of sending to a wrong address.
 ({List<Address> valid, List<String> invalid}) parseAddressList(String input) {
   final valid = <Address>[];
   final invalid = <String>[];
@@ -102,25 +102,25 @@ String folderLabel(Folder folder) => switch (folder.role) {
   return (valid: valid, invalid: invalid);
 }
 
-/// Controllo volutamente semplice: qualcosa@dominio.tld senza spazi.
-/// La validazione vera la fa il server SMTP.
+/// Deliberately simple check: something@domain.tld without spaces. The real
+/// validation is done by the SMTP server.
 bool isValidEmail(String value) =>
     RegExp(r'^[^@\s<>]+@[^@\s<>]+\.[^@\s<>]+$').hasMatch(value);
 
-/// "Re: " davanti all'oggetto, senza raddoppiarlo.
+/// "Re: " in front of the subject, without doubling it.
 String replySubject(String subject) =>
     RegExp(r'^\s*re\s*:', caseSensitive: false).hasMatch(subject)
     ? subject
     : 'Re: $subject';
 
-/// "Fwd: " davanti all'oggetto, senza raddoppiarlo.
+/// "Fwd: " in front of the subject, without doubling it.
 String forwardSubject(String subject) =>
     RegExp(r'^\s*(fwd?|i)\s*:', caseSensitive: false).hasMatch(subject)
     ? subject
     : 'Fwd: $subject';
 
-/// Il testo da citare di un messaggio: la parte testo se c'è, altrimenti
-/// il testo ricavato dall'HTML.
+/// The text of a message to quote: the text part if any, otherwise the text
+/// extracted from the HTML.
 String quotableText(MessageContent message) {
   final plain = message.plainText;
   if (plain != null && plain.trim().isNotEmpty) return plain.trimRight();
@@ -134,8 +134,8 @@ String quotableText(MessageContent message) {
       .trim();
 }
 
-/// Il corpo di una risposta: due righe vuote per scrivere, poi la citazione
-/// con `>` davanti a ogni riga.
+/// The body of a reply: two empty lines to write in, then the quote with `>` in
+/// front of every line.
 String replyBody(MessageContent original) {
   final from = original.summary.from?.label ?? 'Qualcuno';
   final date = original.summary.date;
@@ -146,7 +146,7 @@ String replyBody(MessageContent original) {
   return '\n\n$when$from ha scritto:\n$quoted\n';
 }
 
-/// Il corpo di un inoltro: intestazione del messaggio originale e testo.
+/// The body of a forward: header of the original message and its text.
 String forwardBody(MessageContent original) {
   final s = original.summary;
   final buffer = StringBuffer('\n\n---------- Messaggio inoltrato ----------\n')
@@ -179,8 +179,8 @@ const _months = [
 
 String _two(int n) => n.toString().padLeft(2, '0');
 
-/// Data breve per la lista: ora se è oggi, "Ieri", altrimenti giorno e
-/// mese (più l'anno se non è quello corrente).
+/// Short date for the list: the time if today, "Ieri" (yesterday), otherwise
+/// day and month (plus the year if not the current one).
 String formatListDate(DateTime date, {DateTime? now}) {
   final local = date.toLocal();
   final today = now ?? DateTime.now();
@@ -193,14 +193,14 @@ String formatListDate(DateTime date, {DateTime? now}) {
   return local.year == today.year ? dayMonth : '$dayMonth ${local.year}';
 }
 
-/// Data completa, es. "26 nov 2026, 10:42".
+/// Full date, e.g. "26 nov 2026, 10:42".
 String formatFullDate(DateTime date) {
   final l = date.toLocal();
   return '${l.day} ${_months[l.month - 1]} ${l.year}, '
       '${_two(l.hour)}:${_two(l.minute)}';
 }
 
-/// Dimensione leggibile: "84 KB", "1,2 MB".
+/// Readable size: "84 KB", "1,2 MB".
 String formatSize(int bytes) {
   if (bytes < 1024) return '$bytes B';
   if (bytes < 1024 * 1024) return '${(bytes / 1024).round()} KB';
@@ -208,7 +208,7 @@ String formatSize(int bytes) {
   return '${mb.toStringAsFixed(1).replaceAll('.', ',')} MB';
 }
 
-/// Iniziali per l'avatar: "Marta Bianchi" → "MB".
+/// Avatar initials: "Marta Bianchi" → "MB".
 String initials(String label) {
   final words = label
       .replaceAll(RegExp(r'[<>"@].*'), '')

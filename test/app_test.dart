@@ -41,7 +41,9 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('senza portachiavi l\'app non parte e lo spiega', (tester) async {
+  testWidgets('without a keychain the app does not start and explains why', (
+    tester,
+  ) async {
     secrets = MemorySecretStore(available: false);
     await pumpApp(tester, accounts: MemoryAccountRepository(secrets));
     expect(find.text('Serve il portachiavi di sistema'), findsOneWidget);
@@ -52,14 +54,12 @@ void main() {
     expect(find.text('Aggiungi un account'), findsOneWidget);
   });
 
-  testWidgets('primo avvio: schermata per aggiungere l\'account', (
-    tester,
-  ) async {
+  testWidgets('first start: add-account screen', (tester) async {
     await pumpApp(tester, accounts: MemoryAccountRepository(secrets));
     expect(find.text('Aggiungi un account'), findsOneWidget);
   });
 
-  testWidgets('desktop: tre colonne, apro un messaggio e rispondo', (
+  testWidgets('desktop: three columns, open a message and reply', (
     tester,
   ) async {
     final accounts = MemoryAccountRepository(secrets);
@@ -81,7 +81,7 @@ void main() {
     expect(
       find.bySemanticsLabel('Togli marta@esempio.org da A'),
       findsOneWidget,
-      reason: 'chip del mittente',
+      reason: 'sender chip',
     );
 
     await tester.tap(find.text('Invia'));
@@ -90,7 +90,7 @@ void main() {
     expect(server.sent.single.subject, 'Re: Oggetto 5');
   });
 
-  testWidgets('scrivere: indirizzo non valido blocca l\'invio', (tester) async {
+  testWidgets('compose: an invalid address blocks sending', (tester) async {
     final accounts = MemoryAccountRepository(secrets);
     await accounts.save(testAccount, 'p');
     await pumpApp(tester, accounts: accounts);
@@ -107,7 +107,7 @@ void main() {
     expect(server.sent, isEmpty);
   });
 
-  testWidgets('mobile: lista, poi il messaggio in una pagina', (tester) async {
+  testWidgets('mobile: list, then the message in its own page', (tester) async {
     final accounts = MemoryAccountRepository(secrets);
     await accounts.save(testAccount, 'p');
     await pumpApp(tester, accounts: accounts, size: const Size(400, 800));
@@ -123,7 +123,7 @@ void main() {
     expect(find.text('Oggetto 4'), findsOneWidget);
   });
 
-  testWidgets('più account: cambio account e aggiunta annullabile', (
+  testWidgets('multiple accounts: switch account, cancellable add', (
     tester,
   ) async {
     final accounts = MemoryAccountRepository(secrets);
@@ -148,7 +148,7 @@ void main() {
     expect(find.text(secondAccount.email), findsOneWidget);
   });
 
-  testWidgets('più account: tutte le caselle insieme', (tester) async {
+  testWidgets('multiple accounts: all inboxes together', (tester) async {
     final accounts = MemoryAccountRepository(secrets);
     await accounts.save(testAccount, 'p');
     await accounts.save(secondAccount, 'p');
@@ -156,8 +156,8 @@ void main() {
 
     await tester.tap(find.bySemanticsLabel('Tutte le caselle'));
     await tester.pumpAndSettle();
-    // Lo stesso server finto per i due account: ogni messaggio c'è due
-    // volte, una per account, con l'indirizzo sotto.
+    // The same fake server for both accounts: every message appears twice, once
+    // per account, with the address below.
     expect(find.text('Oggetto 5'), findsNWidgets(2));
     expect(find.text(secondAccount.email), findsWidgets);
 
@@ -165,7 +165,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Testo del messaggio 5'), findsOneWidget);
 
-    // Una cartella riporta alle cartelle dell'account.
+    // A folder takes you back to the account's folders.
     await tester.tap(find.bySemanticsLabel('Posta in arrivo'));
     await tester.pumpAndSettle();
     expect(find.text('Oggetto 5'), findsOneWidget);

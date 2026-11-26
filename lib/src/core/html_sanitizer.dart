@@ -5,27 +5,27 @@ import 'package:html/parser.dart' as html_parser;
 
 import 'models.dart';
 
-/// Risultato della ripulitura di una mail HTML.
+/// Result of cleaning an HTML mail.
 class SanitizedHtml {
-  /// Crea il risultato.
+  /// Creates the result.
   const SanitizedHtml({required this.document, required this.blockedRemote});
 
-  /// La pagina completa da dare alla WebView, con la Content-Security-Policy.
+  /// The full page to give the WebView, with the Content-Security-Policy.
   final String document;
 
-  /// Quante risorse remote (immagini, sfondi) sono state bloccate. Se è più
-  /// di zero la UI mostra "Carica immagini".
+  /// How many remote resources (images, backgrounds) were blocked. If more than
+  /// zero, the UI shows "Load images".
   final int blockedRemote;
 }
 
-/// Ripulisce l'HTML di una mail prima di mostrarlo.
+/// Cleans a mail's HTML before showing it.
 ///
-/// È il secondo dei tre muri (gli altri: JavaScript spento nella WebView e
-/// la CSP dentro la pagina). Funziona a *lista bianca*: tiene solo i tag e
-/// gli attributi che conosciamo, tutto il resto sparisce. Una lista nera
-/// ("togli script e iframe") dimentica sempre qualcosa.
+/// It is the second of three walls (the others: JavaScript off in the WebView
+/// and the CSP inside the page). It works as an *allow list*: it keeps only the
+/// tags and attributes we know, everything else goes. A deny list ("remove
+/// script and iframe") always forgets something.
 class HtmlSanitizer {
-  /// Crea il sanificatore.
+  /// Creates the sanitizer.
   const HtmlSanitizer();
 
   static const _allowedTags = {
@@ -102,7 +102,7 @@ class HtmlSanitizer {
     'wbr',
   };
 
-  /// Tag tolti insieme a tutto quello che contengono.
+  /// Tags removed together with everything they contain.
   static const _droppedWithContent = {
     'script',
     'noscript',
@@ -167,8 +167,8 @@ class HtmlSanitizer {
   static final _remoteUrl = RegExp(r'^\s*(https?:)?//', caseSensitive: false);
   static final _cssUrl = RegExp(r'url\(\s*([^)]*)\)', caseSensitive: false);
 
-  /// Ripulisce [html]. Le immagini `cid:` diventano `data:` prese da
-  /// [inlineImages]; quelle remote si caricano solo con [allowRemote].
+  /// Cleans [html]. `cid:` images become `data:` taken from [inlineImages];
+  /// remote ones load only with [allowRemote].
   SanitizedHtml sanitize(
     String html, {
     Map<String, InlineImage> inlineImages = const {},
@@ -195,14 +195,14 @@ class HtmlSanitizer {
     }
 
     String cleanCss(String css) => css
-        // Vecchi trucchi di Internet Explorer per eseguire codice da CSS.
+        // Old Internet Explorer tricks to run code from CSS.
         .replaceAll(RegExp(r'expression\s*\(', caseSensitive: false), '(')
         .replaceAll(RegExp(r'@import[^;]*;?', caseSensitive: false), '')
         .replaceAll(RegExp(r'javascript:', caseSensitive: false), '')
-        // Le regole "modalità scura" della mail mettono il testo chiaro e si
-        // aspettano che il client scurisca lo sfondo; noi lo teniamo bianco.
-        // Una media query con una caratteristica sconosciuta non è mai vera,
-        // quindi quei blocchi restano spenti su ogni piattaforma.
+        // The mail's "dark mode" rules make the text light and expect the
+        // client to darken the background; we keep it white. A media query with
+        // an unknown feature is never true, so those blocks stay off on every
+        // platform.
         .replaceAll(
           RegExp(r'prefers-color-scheme\s*:\s*dark', caseSensitive: false),
           'kaamos-dark-mode-off',
@@ -230,8 +230,8 @@ class HtmlSanitizer {
             continue;
           }
           if (!_allowedTags.contains(tag)) {
-            // Tag sconosciuto: si tiene il contenuto, non il tag (es. <o:p>
-            // di Outlook, <html>, <body>).
+            // Unknown tag: keep the content, not the tag (e.g. Outlook's <o:p>,
+            // <html>, <body>).
             clean(child);
             child.reparentChildren(child.parentNode!);
             child.remove();
@@ -240,21 +240,21 @@ class HtmlSanitizer {
           _cleanAttributes(child, fixImageUrl, cleanCss);
           clean(child);
         } else if (child is dom.Comment) {
-          // I commenti condizionali di Outlook possono contenere HTML.
+          // Outlook conditional comments can contain HTML.
           child.remove();
         }
       }
     }
 
     final body = document.body ?? document.documentElement!;
-    // Gli <style> in <head> servono alle newsletter: li portiamo nel body
-    // prima di buttare via la head.
+    // <style> in <head> matters to newsletters: move it into the body before
+    // throwing away the head.
     for (final style in document.querySelectorAll('head style').toList()) {
       body.nodes.insert(0, style..remove());
     }
-    // Gli attributi del <body> originale (sfondo, colore del testo):
-    // tante newsletter mettono lo sfondo scuro lì e il testo bianco nel
-    // contenuto. Se li perdiamo, il testo resta bianco su bianco.
+    // The original <body> attributes (background, text colour): many
+    // newsletters put the dark background there and the white text in the
+    // content. If we lose them, the text ends up white on white.
     final bodyAttributes = _bodyAttributes(
       document.body,
       fixImageUrl,
@@ -291,12 +291,12 @@ pre { white-space: pre-wrap; }
     return SanitizedHtml(document: page, blockedRemote: blocked);
   }
 
-  /// Attributi che hanno senso solo sul `<body>` (HTML vecchio, ma ancora
-  /// molto usato nelle mail).
+  /// Attributes that only make sense on `<body>` (old HTML, but still common in
+  /// mail).
   static const _bodyOnlyAttributes = {'text', 'link', 'vlink', 'alink'};
 
-  /// Gli attributi ripuliti del `<body>` originale, già pronti da scrivere
-  /// nel tag (es. ` bgcolor="#1a1a1a" style="color: #fff"`).
+  /// The cleaned attributes of the original `<body>`, ready to write into the
+  /// tag (e.g. ` bgcolor="#1a1a1a" style="color: #fff"`).
   static String _bodyAttributes(
     dom.Element? original,
     String? Function(String) fixImageUrl,
@@ -317,7 +317,7 @@ pre { white-space: pre-wrap; }
     final all = {
       for (final MapEntry(:key, :value) in copy.attributes.entries)
         key.toString(): value,
-      // Solo colori: niente che possa contenere un indirizzo.
+      // Colours only: nothing that could contain a URL.
       for (final MapEntry(:key, :value) in legacy.entries)
         if (RegExp(r'^#?[0-9a-zA-Z]{1,20}$').hasMatch(value.trim()))
           key: value.trim(),
@@ -356,6 +356,6 @@ pre { white-space: pre-wrap; }
   }
 }
 
-/// Il testo semplice in HTML, per mostrarlo nella stessa WebView quando
-/// serve (es. una mail solo testo con link). Escape di tutto il testo.
+/// Plain text as HTML, to show it in the same WebView when needed (e.g. a
+/// text-only mail with links). Escapes all the text.
 String escapeHtml(String text) => const HtmlEscape().convert(text);

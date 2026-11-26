@@ -46,20 +46,20 @@ void main() {
     cache.close();
   });
 
-  test('parte dal primo account e cambia con select', () {
+  test('starts from the first account and switches with select', () {
     expect(session.active?.id, testAccount.id);
     session.select(secondAccount.id);
     expect(session.active?.id, secondAccount.id);
     expect(session.controller?.account.id, secondAccount.id);
   });
 
-  test('un controller per account, riusato', () {
+  test('one controller per account, reused', () {
     final a = session.controllerFor(testAccount);
     expect(session.controllerFor(testAccount), same(a));
     expect(session.controllerFor(secondAccount), isNot(same(a)));
   });
 
-  test('un account aggiunto diventa quello mostrato', () {
+  test('an added account becomes the one shown', () {
     const third = Account(
       id: 'acc3',
       displayName: 'Foto',
@@ -81,9 +81,9 @@ void main() {
     expect(session.active?.id, 'acc3');
   });
 
-  test('rimuovere cancella password e cache e passa a un altro', () async {
+  test('removing deletes password and cache and switches to another', () async {
     session.select(secondAccount.id);
-    session.controllerFor(secondAccount); // si avvia da solo
+    session.controllerFor(secondAccount); // it starts by itself
     await pumpEventQueue();
     expect(cache.loadSummaries(secondAccount.id, 'INBOX'), isNotEmpty);
 

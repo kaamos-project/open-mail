@@ -28,7 +28,7 @@ void main() {
     cache.close();
   });
 
-  test('primo avvio: scarica solo l\'ultima pagina', () async {
+  test('first start: downloads only the latest page', () async {
     await c.start();
     expect(c.folders.first.role, FolderRole.inbox);
     expect(c.messages.map((m) => m.uid).take(3), [25, 24, 23]);
@@ -39,7 +39,7 @@ void main() {
   });
 
   test(
-    'secondo avvio: mostra la cache subito e scarica solo i nuovi',
+    'second start: shows the cache at once and downloads only new ones',
     () async {
       await c.start();
       c.dispose();
@@ -54,13 +54,13 @@ void main() {
         }
       });
       await c.start();
-      expect(shown.first, 25, reason: 'la cache arriva prima del server');
+      expect(shown.first, 25, reason: 'the cache arrives before the server');
       expect(c.messages.first.uid, 26);
       expect(server.fetchedSummaries, 1);
     },
   );
 
-  test('i messaggi spariti dal server spariscono anche qui', () async {
+  test('messages gone from the server disappear here too', () async {
     await c.start();
     server.folders['INBOX']!.messages.remove(25);
     await c.refresh();
@@ -68,7 +68,7 @@ void main() {
     expect(cache.cachedUids(testAccount.id, 'INBOX'), isNot(contains(25)));
   });
 
-  test('UIDVALIDITY cambiata: la cache si ricostruisce', () async {
+  test('UIDVALIDITY changed: the cache is rebuilt', () async {
     await c.start();
     server
       ..folders['INBOX']!.uidValidity = 2
@@ -77,7 +77,7 @@ void main() {
     expect(server.fetchedSummaries, 10);
   });
 
-  test('Carica altri allarga la finestra', () async {
+  test('load more widens the window', () async {
     await c.start();
     await c.loadMore();
     expect(c.messages, hasLength(20));
@@ -86,7 +86,7 @@ void main() {
     expect(c.hasMore, isFalse);
   });
 
-  test('aprire un messaggio lo segna letto, anche sul server', () async {
+  test('opening a message marks it read, on the server too', () async {
     await c.start();
     await c.open(25);
     expect(c.openMessage?.plainText, 'Testo del messaggio 25');
@@ -94,7 +94,7 @@ void main() {
     expect(server.folders['INBOX']!.messages[25]!.seen, isTrue);
   });
 
-  test('se il server rifiuta, la stella torna com\'era', () async {
+  test('if the server refuses, the star goes back', () async {
     await c.start();
     server.failWith = Exception('rete giù');
     await c.setFlagged([25], flagged: true);
@@ -102,7 +102,7 @@ void main() {
     expect(c.error, isNotNull);
   });
 
-  test('elimina sposta nel Cestino, dal Cestino cancella per sempre', () async {
+  test('delete moves to Trash, from Trash deletes for good', () async {
     await c.start();
     await c.delete([25]);
     expect(c.messages.first.uid, 24);
@@ -115,14 +115,14 @@ void main() {
     expect(server.folders['Trash']!.messages, isEmpty);
   });
 
-  test('archivia sposta in Archivio', () async {
+  test('archive moves to Archive', () async {
     await c.start();
     await c.archive([24, 23]);
     expect(server.folders['Archive']!.messages, hasLength(2));
     expect(c.messages.map((m) => m.uid), isNot(contains(24)));
   });
 
-  test('invio: copia in Inviati come letta, originale risposto', () async {
+  test('send: copy in Sent as read, original answered', () async {
     await c.start();
     await c.send(
       const OutgoingMessage(
@@ -141,7 +141,7 @@ void main() {
     expect(server.folders['INBOX']!.messages[25]!.answered, isTrue);
   });
 
-  test('bozza in Bozze con \\Draft', () async {
+  test('draft in Drafts with \\Draft', () async {
     await c.start();
     final ok = await c.saveDraft(
       const OutgoingMessage(
@@ -156,7 +156,7 @@ void main() {
     expect(server.appended.single.$2, contains(r'\Draft'));
   });
 
-  test('ricerca sul server e ritorno alla cartella', () async {
+  test('server search and back to the folder', () async {
     await c.start();
     await c.search('Oggetto 7');
     expect(c.messages.map((m) => m.uid), [7]);
@@ -165,7 +165,7 @@ void main() {
     expect(c.messages, hasLength(10));
   });
 
-  test('senza rete l\'errore si vede e la cache resta', () async {
+  test('without network the error shows and the cache stays', () async {
     await c.start();
     server.failWith = Exception('offline');
     await c.refresh();
@@ -173,17 +173,17 @@ void main() {
     expect(c.messages, hasLength(10));
   });
 
-  test('in Archivio conta la data, non quando l\'hai spostata', () async {
+  test('in Archive the date counts, not when you moved it', () async {
     await c.start();
     await c.archive([24]);
-    await c.archive([1]); // il più vecchio, archiviato per ultimo
+    await c.archive([1]); // the oldest, archived last
     await c.selectFolder(c.folderWithRole(FolderRole.archive)!);
-    // UID 1 = messaggio 24 (recente), UID 2 = messaggio 1 (vecchio).
+    // UID 1 = message 24 (recent), UID 2 = message 1 (old).
     expect(c.messages.map((m) => m.subject), ['Oggetto 24', 'Oggetto 1']);
   });
 
-  test('la prima pagina sono i più recenti per data, non per UID', () async {
-    // UID 1 (il più basso) è però la mail più recente.
+  test('the first page is the newest by date, not by UID', () async {
+    // Yet UID 1 (the lowest) is the most recent mail.
     final m = server.folders['INBOX']!.messages[1]!;
     server.folders['INBOX']!.messages[1] = MessageSummary(
       uid: 1,
@@ -202,7 +202,7 @@ void main() {
     expect(c.messages, hasLength(10));
   });
 
-  test('le date si scaricano una volta sola, poi solo le nuove', () async {
+  test('dates are downloaded once, then only new ones', () async {
     await c.start();
     expect(server.fetchedDates, 25);
     server.folders['INBOX']!.messages[26] = summary(26);

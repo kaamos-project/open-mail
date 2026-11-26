@@ -8,10 +8,10 @@ import '../data/account_repository.dart';
 import '../data/mail_cache.dart';
 import '../data/secret_store.dart';
 
-/// Disegna il corpo HTML (già ripulito) di un messaggio.
+/// Draws the (already cleaned) HTML body of a message.
 ///
-/// Nell'app vera è una WebView; nei test e dove la WebView non c'è
-/// (Linux, fase 2) si usa un sostituto.
+/// In the real app it is a WebView; in tests and where there is no WebView
+/// (Linux, phase 2) a substitute is used.
 typedef HtmlBodyBuilder =
     Widget Function(
       BuildContext context,
@@ -19,26 +19,25 @@ typedef HtmlBodyBuilder =
       ValueChanged<Uri> onOpenLink,
     );
 
-/// Le azioni sui file che dipendono dal sistema operativo.
+/// File actions that depend on the operating system.
 abstract interface class FileActions {
-  /// Fa scegliere dei file da allegare. Lista vuota se l'utente annulla.
+  /// Lets the user pick files to attach. Empty list if they cancel.
   Future<List<OutgoingAttachment>> pickAttachments();
 
-  /// Salva un allegato in una cartella temporanea e lo apre con l'app di
-  /// sistema.
+  /// Saves an attachment to a temporary folder and opens it with the system
+  /// app.
   Future<void> openAttachment(String fileName, Uint8List bytes);
 
-  /// Apre un link nel browser di sistema.
+  /// Opens a link in the system browser.
   Future<void> openLink(Uri uri);
 }
 
-/// Tutti i servizi dell'app, messi a disposizione dei widget.
+/// All of the app's services, made available to widgets.
 ///
-/// Un `InheritedWidget` invece di variabili globali: nei test si costruisce
-/// un ambiente con server finto e cache in memoria, senza toccare il codice
-/// delle schermate.
+/// An `InheritedWidget` instead of globals: tests build an environment with a
+/// fake server and an in-memory cache, without touching the screens' code.
 class MailEnvironment extends InheritedWidget {
-  /// Crea l'ambiente.
+  /// Creates the environment.
   const MailEnvironment({
     super.key,
     required this.accounts,
@@ -50,25 +49,25 @@ class MailEnvironment extends InheritedWidget {
     required super.child,
   });
 
-  /// Account salvati.
+  /// Saved accounts.
   final AccountRepository accounts;
 
-  /// Portachiavi.
+  /// Keychain.
   final SecretStore secrets;
 
-  /// Cache SQLite.
+  /// SQLite cache.
   final MailCache cache;
 
-  /// Crea le connessioni ai server.
+  /// Creates the server connections.
   final MailServiceFactory services;
 
-  /// File e link.
+  /// Files and links.
   final FileActions files;
 
-  /// Disegna le mail HTML.
+  /// Draws HTML mail.
   final HtmlBodyBuilder htmlBody;
 
-  /// L'ambiente più vicino.
+  /// The nearest environment.
   static MailEnvironment of(BuildContext context) {
     final env = context.dependOnInheritedWidgetOfExactType<MailEnvironment>();
     assert(env != null, 'Nessun MailEnvironment sopra questo widget');

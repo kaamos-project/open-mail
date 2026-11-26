@@ -4,10 +4,10 @@ import 'package:kaamos_project_ui/kaamos_project_ui.dart';
 import '../../core/text_utils.dart';
 import 'mail_icons.dart';
 
-/// Bottone quadrato con solo un'icona (36px, 44px su touch).
+/// Square icon-only button (36px, 44px on touch).
 class MailIconButton extends StatelessWidget {
-  /// Crea il bottone. [label] è obbligatorio: è quello che legge lo screen
-  /// reader al posto dell'icona.
+  /// Creates the button. [label] is required: it is what the screen reader
+  /// reads instead of the icon.
   const MailIconButton({
     super.key,
     required this.icon,
@@ -18,22 +18,22 @@ class MailIconButton extends StatelessWidget {
     this.iconColor,
   });
 
-  /// L'icona.
+  /// The icon.
   final MailIcon icon;
 
-  /// Nome dell'azione.
+  /// Name of the action.
   final String label;
 
-  /// Azione; `null` = disabilitato.
+  /// Action; `null` = disabled.
   final VoidCallback? onPressed;
 
-  /// Lato del bottone.
+  /// Side of the button.
   final double size;
 
-  /// Sfondo `surfaceElevated` invece che trasparente.
+  /// `surfaceElevated` background instead of transparent.
   final bool filled;
 
-  /// Colore dell'icona, se diverso dal default.
+  /// Icon colour, if different from the default.
   final Color? iconColor;
 
   @override
@@ -75,15 +75,15 @@ class MailIconButton extends StatelessWidget {
   }
 }
 
-/// Cerchio con le iniziali.
+/// Circle with initials.
 class MailAvatar extends StatelessWidget {
-  /// Crea l'avatar per [label].
+  /// Creates the avatar for [label].
   const MailAvatar({super.key, required this.label, this.size = 40});
 
-  /// Nome o indirizzo.
+  /// Name or address.
   final String label;
 
-  /// Diametro.
+  /// Diameter.
   final double size;
 
   @override
@@ -108,9 +108,9 @@ class MailAvatar extends StatelessWidget {
   }
 }
 
-/// Linea sottile orizzontale.
+/// Thin horizontal line.
 class Hairline extends StatelessWidget {
-  /// Crea la linea.
+  /// Creates the line.
   const Hairline({super.key});
 
   @override
@@ -118,9 +118,9 @@ class Hairline extends StatelessWidget {
       Container(height: 1, color: KaamosTheme.of(context).hairline);
 }
 
-/// Linea sottile verticale.
+/// Thin vertical line.
 class VerticalHairline extends StatelessWidget {
-  /// Crea la linea.
+  /// Creates the line.
   const VerticalHairline({super.key});
 
   @override
@@ -128,9 +128,9 @@ class VerticalHairline extends StatelessWidget {
       Container(width: 1, color: KaamosTheme.of(context).hairline);
 }
 
-/// Riquadro informativo (es. "immagini remote bloccate", errori).
+/// Information box (e.g. "remote images blocked", errors).
 class MailBanner extends StatelessWidget {
-  /// Crea il riquadro.
+  /// Creates the box.
   const MailBanner({
     super.key,
     required this.icon,
@@ -139,16 +139,16 @@ class MailBanner extends StatelessWidget {
     this.danger = false,
   });
 
-  /// Icona a sinistra.
+  /// Icon on the left.
   final MailIcon icon;
 
-  /// Testo.
+  /// Text.
   final String message;
 
-  /// Bottone a destra.
+  /// Button on the right.
   final Widget? action;
 
-  /// Colore di errore per l'icona.
+  /// Error colour for the icon.
   final bool danger;
 
   @override

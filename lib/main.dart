@@ -13,9 +13,9 @@ import 'src/ui/platform.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // La cartella dati dell'app (es. %APPDATA% su Windows, Application
-  // Support su macOS/iOS): qui stanno solo la lista degli account (senza
-  // password) e la cache delle mail.
+  // The app's data folder (e.g. %APPDATA% on Windows, Application Support on
+  // macOS/iOS): it holds only the account list (without passwords) and the mail
+  // cache.
   final dir = await getApplicationSupportDirectory();
   await dir.create(recursive: true);
   final sep = Platform.pathSeparator;

@@ -11,11 +11,11 @@ import 'ui/screens/account_setup.dart';
 import 'ui/screens/keychain_missing.dart';
 import 'ui/screens/mail_home.dart';
 
-/// L'app: mette i servizi nel [MailEnvironment] e decide la prima
-/// schermata.
+/// The app: puts the services in the [MailEnvironment] and decides the first
+/// screen.
 class KaamosMailApp extends StatelessWidget {
-  /// Crea l'app con i servizi già pronti (veri in `main.dart`, finti nei
-  /// test).
+  /// Creates the app with the services ready (real in `main.dart`, fake in
+  /// tests).
   const KaamosMailApp({
     super.key,
     required this.accounts,
@@ -26,22 +26,22 @@ class KaamosMailApp extends StatelessWidget {
     required this.htmlBody,
   });
 
-  /// Account salvati.
+  /// Saved accounts.
   final AccountRepository accounts;
 
-  /// Portachiavi.
+  /// Keychain.
   final SecretStore secrets;
 
-  /// Cache SQLite.
+  /// SQLite cache.
   final MailCache cache;
 
-  /// Connessioni ai server.
+  /// Server connections.
   final MailServiceFactory services;
 
-  /// File e link.
+  /// Files and links.
   final FileActions files;
 
-  /// Corpo HTML.
+  /// HTML body.
   final HtmlBodyBuilder htmlBody;
 
   @override
@@ -64,7 +64,7 @@ class KaamosMailApp extends StatelessWidget {
 
 enum _Phase { checking, keychainMissing, ready }
 
-/// Avvio: portachiavi → account → casella.
+/// Startup: keychain → accounts → mailbox.
 class _Root extends StatefulWidget {
   const _Root();
 
@@ -96,8 +96,8 @@ class _RootState extends State<_Root> {
   Future<void> _boot() async {
     final env = MailEnvironment.of(context);
     setState(() => _phase = _Phase.checking);
-    // Prima di tutto il portachiavi: senza, l'app non parte (decisione di
-    // Alessio: niente password in chiaro, mai).
+    // Keychain first: without it the app doesn't start (Alessio's decision: no
+    // plain-text passwords, ever).
     if (!await env.secrets.isAvailable()) {
       if (mounted) setState(() => _phase = _Phase.keychainMissing);
       return;
@@ -137,15 +137,15 @@ class _RootState extends State<_Root> {
                 session.added(account);
                 setState(() => _addingAccount = false);
               },
-              // Al primo avvio non c'è niente a cui tornare.
+              // On first start there is nothing to go back to.
               onCancel: controller == null
                   ? null
                   : () => setState(() => _addingAccount = false),
             );
           }
           return MailHome(
-            // Cambiando account la casella riparte pulita (es. una bozza
-            // aperta su desktop resta dell'account in cui era).
+            // Switching account restarts the mailbox clean (e.g. a draft open
+            // on desktop stays with the account it belongs to).
             key: ValueKey(controller.account.id),
             controller: controller,
             accounts: session.accounts,

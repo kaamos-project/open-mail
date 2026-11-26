@@ -22,12 +22,12 @@ void main() {
 
   tearDown(() => dir.delete(recursive: true));
 
-  test('senza file non ci sono account', () async {
+  test('no file means no accounts', () async {
     expect(await repo.load(), isEmpty);
   });
 
   test(
-    'salva l\'account nel file e la password solo nel portachiavi',
+    'saves the account in the file and the password only in the keychain',
     () async {
       await repo.save(testAccount, 'segreta-123');
       final json = await File('${dir.path}/accounts.json').readAsString();
@@ -41,7 +41,7 @@ void main() {
     },
   );
 
-  test('rimuovere cancella anche la password', () async {
+  test('removing also deletes the password', () async {
     await repo.save(testAccount, 'p');
     await repo.remove(testAccount.id);
     expect(await repo.load(), isEmpty);

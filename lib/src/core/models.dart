@@ -1,41 +1,41 @@
 import 'package:flutter/foundation.dart';
 
-/// Come si protegge la connessione verso un server.
+/// How the connection to a server is secured.
 enum ConnectionSecurity {
-  /// TLS dall'inizio (IMAP 993, SMTP 465).
+  /// TLS from the start (IMAP 993, SMTP 465).
   tls,
 
-  /// Connessione in chiaro che passa a TLS con STARTTLS (IMAP 143, SMTP 587).
+  /// Plain connection upgraded to TLS with STARTTLS (IMAP 143, SMTP 587).
   startTls,
 }
 
-/// Indirizzo, porta e sicurezza di un server IMAP o SMTP.
+/// Host, port and security of an IMAP or SMTP server.
 @immutable
 class ServerConfig {
-  /// Crea la configurazione di un server.
+  /// Creates a server configuration.
   const ServerConfig({
     required this.host,
     required this.port,
     required this.security,
   });
 
-  /// Legge la configurazione salvata con [toJson].
+  /// Reads a configuration saved with [toJson].
   factory ServerConfig.fromJson(Map<String, Object?> json) => ServerConfig(
     host: json['host']! as String,
     port: json['port']! as int,
     security: ConnectionSecurity.values.byName(json['security']! as String),
   );
 
-  /// Nome del server, es. `imap.esempio.it`.
+  /// Host name, e.g. `imap.example.com`.
   final String host;
 
-  /// Porta TCP.
+  /// TCP port.
   final int port;
 
-  /// TLS diretto o STARTTLS.
+  /// Direct TLS or STARTTLS.
   final ConnectionSecurity security;
 
-  /// Per salvare la configurazione su disco.
+  /// For saving the configuration to disk.
   Map<String, Object?> toJson() => {
     'host': host,
     'port': port,
@@ -53,14 +53,14 @@ class ServerConfig {
   int get hashCode => Object.hash(host, port, security);
 }
 
-/// Un account email configurato a mano.
+/// An email account configured by hand.
 ///
-/// Non contiene la password: quella vive solo nel portachiavi di sistema
-/// (vedi `SecretStore`). Così il file con gli account si può leggere senza
-/// esporre niente di segreto.
+/// It holds no password: that lives only in the system keychain (see
+/// `SecretStore`). This way the accounts file can be read without exposing
+/// anything secret.
 @immutable
 class Account {
-  /// Crea un account.
+  /// Creates an account.
   const Account({
     required this.id,
     required this.displayName,
@@ -70,7 +70,7 @@ class Account {
     required this.smtp,
   });
 
-  /// Legge un account salvato con [toJson].
+  /// Reads an account saved with [toJson].
   factory Account.fromJson(Map<String, Object?> json) => Account(
     id: json['id']! as String,
     displayName: json['displayName']! as String,
@@ -80,25 +80,25 @@ class Account {
     smtp: ServerConfig.fromJson(json['smtp']! as Map<String, Object?>),
   );
 
-  /// Identificativo locale, stabile anche se l'utente cambia indirizzo.
+  /// Local identifier, stable even if the user changes address.
   final String id;
 
-  /// Il nome che vedono i destinatari ("Alessio").
+  /// The name recipients see ("Alessio").
   final String displayName;
 
-  /// L'indirizzo email.
+  /// The email address.
   final String email;
 
-  /// Il nome utente per IMAP e SMTP (di solito uguale a [email]).
+  /// The IMAP and SMTP user name (usually the same as [email]).
   final String username;
 
-  /// Server della posta in arrivo.
+  /// Incoming mail server.
   final ServerConfig imap;
 
-  /// Server della posta in uscita.
+  /// Outgoing mail server.
   final ServerConfig smtp;
 
-  /// Per salvare l'account su disco.
+  /// For saving the account to disk.
   Map<String, Object?> toJson() => {
     'id': id,
     'displayName': displayName,
@@ -109,43 +109,43 @@ class Account {
   };
 }
 
-/// Il ruolo speciale di una cartella (RFC 6154, SPECIAL-USE).
+/// The special role of a folder (RFC 6154, SPECIAL-USE).
 enum FolderRole {
-  /// Posta in arrivo.
+  /// Inbox.
   inbox,
 
-  /// Messaggi inviati.
+  /// Sent messages.
   sent,
 
-  /// Bozze.
+  /// Drafts.
   drafts,
 
-  /// Archivio.
+  /// Archive.
   archive,
 
-  /// Cestino.
+  /// Trash.
   trash,
 
   /// Spam.
   junk,
 
-  /// Una cartella creata dall'utente.
+  /// A folder created by the user.
   other,
 }
 
-/// Una cartella IMAP.
+/// An IMAP folder.
 @immutable
 class Folder {
-  /// Crea una cartella.
+  /// Creates a folder.
   const Folder({required this.path, required this.name, required this.role});
 
-  /// Percorso completo sul server, es. `INBOX/Fotografia`.
+  /// Full path on the server, e.g. `INBOX/Photography`.
   final String path;
 
-  /// Nome da mostrare.
+  /// Display name.
   final String name;
 
-  /// Ruolo speciale, se c'è.
+  /// Special role, if any.
   final FolderRole role;
 
   @override
@@ -156,42 +156,42 @@ class Folder {
   int get hashCode => Object.hash(path, role);
 }
 
-/// Stato di una cartella appena aperta (risposta a SELECT).
+/// State of a folder that was just opened (the SELECT response).
 @immutable
 class FolderStatus {
-  /// Crea lo stato di una cartella.
+  /// Creates a folder status.
   const FolderStatus({
     required this.uidValidity,
     required this.uidNext,
     required this.exists,
   });
 
-  /// Se cambia, gli UID che conosciamo non valgono più: la cache va svuotata.
+  /// If it changes, the UIDs we know are no longer valid: clear the cache.
   final int uidValidity;
 
-  /// L'UID che avrà il prossimo messaggio: tutto ciò che è sotto esiste già.
+  /// The UID the next message will get: everything below it already exists.
   final int uidNext;
 
-  /// Quanti messaggi ci sono nella cartella.
+  /// How many messages the folder holds.
   final int exists;
 }
 
-/// Un indirizzo con il nome facoltativo.
+/// An address with an optional name.
 @immutable
 class Address {
-  /// Crea un indirizzo.
+  /// Creates an address.
   const Address(this.email, [this.name]);
 
-  /// L'indirizzo, es. `marta@esempio.org`.
+  /// The address, e.g. `marta@example.org`.
   final String email;
 
-  /// Il nome, es. `Marta Bianchi`.
+  /// The name, e.g. `Marta Bianchi`.
   final String? name;
 
-  /// Il nome se c'è, altrimenti l'indirizzo.
+  /// The name if present, otherwise the address.
   String get label => (name == null || name!.trim().isEmpty) ? email : name!;
 
-  /// Forma `Nome <indirizzo>`.
+  /// `Name <address>` form.
   @override
   String toString() =>
       (name == null || name!.isEmpty) ? email : '$name <$email>';
@@ -206,10 +206,10 @@ class Address {
   int get hashCode => Object.hash(email.toLowerCase(), name);
 }
 
-/// Una riga della lista messaggi: quello che serve senza scaricare il corpo.
+/// A row of the message list: what is needed without downloading the body.
 @immutable
 class MessageSummary {
-  /// Crea il riassunto di un messaggio.
+  /// Creates a message summary.
   const MessageSummary({
     required this.uid,
     required this.from,
@@ -223,37 +223,37 @@ class MessageSummary {
     required this.hasAttachments,
   });
 
-  /// UID IMAP, unico nella cartella finché `UIDVALIDITY` non cambia.
+  /// IMAP UID, unique in the folder as long as `UIDVALIDITY` does not change.
   final int uid;
 
-  /// Mittente.
+  /// Sender.
   final Address? from;
 
-  /// Destinatari principali.
+  /// Main recipients.
   final List<Address> to;
 
-  /// Oggetto.
+  /// Subject.
   final String subject;
 
-  /// Data di invio.
+  /// Date sent.
   final DateTime? date;
 
-  /// Inizio del testo, già ripulito, per l'anteprima nella lista.
+  /// Start of the text, already cleaned up, for the list preview.
   final String preview;
 
-  /// Letto.
+  /// Read.
   final bool seen;
 
-  /// Contrassegnato con la stella.
+  /// Starred.
   final bool flagged;
 
-  /// Già risposto.
+  /// Already answered.
   final bool answered;
 
-  /// Ha almeno un allegato.
+  /// Has at least one attachment.
   final bool hasAttachments;
 
-  /// Copia con alcuni campi cambiati.
+  /// Copy with some fields changed.
   MessageSummary copyWith({bool? seen, bool? flagged, bool? answered}) =>
       MessageSummary(
         uid: uid,
@@ -269,10 +269,10 @@ class MessageSummary {
       );
 }
 
-/// Un allegato di un messaggio scaricato.
+/// An attachment of a downloaded message.
 @immutable
 class AttachmentInfo {
-  /// Crea la descrizione di un allegato.
+  /// Creates an attachment description.
   const AttachmentInfo({
     required this.fetchId,
     required this.fileName,
@@ -280,23 +280,23 @@ class AttachmentInfo {
     required this.mimeType,
   });
 
-  /// Identificativo della parte MIME, es. `2` o `1.2`.
+  /// MIME part identifier, e.g. `2` or `1.2`.
   final String fetchId;
 
-  /// Nome del file.
+  /// File name.
   final String fileName;
 
-  /// Dimensione in byte, se il server la conosce.
+  /// Size in bytes, if the server knows it.
   final int? size;
 
-  /// Tipo, es. `application/pdf`.
+  /// Type, e.g. `application/pdf`.
   final String mimeType;
 }
 
-/// Il contenuto completo di un messaggio aperto.
+/// The full content of an opened message.
 @immutable
 class MessageContent {
-  /// Crea il contenuto di un messaggio.
+  /// Creates a message content.
   const MessageContent({
     required this.summary,
     required this.cc,
@@ -309,72 +309,72 @@ class MessageContent {
     required this.inlineImages,
   });
 
-  /// I campi della lista.
+  /// The list fields.
   final MessageSummary summary;
 
-  /// Destinatari in copia.
+  /// Cc recipients.
   final List<Address> cc;
 
-  /// Dove rispondere, se diverso dal mittente.
+  /// Where to reply, if different from the sender.
   final List<Address> replyTo;
 
-  /// Header `Message-ID`, per collegare le risposte.
+  /// `Message-ID` header, to link replies.
   final String? messageId;
 
-  /// Header `References`, per collegare le risposte.
+  /// `References` header, to link replies.
   final List<String> references;
 
-  /// La parte `text/plain`, se c'è.
+  /// The `text/plain` part, if any.
   final String? plainText;
 
-  /// La parte `text/html` così come arriva: va sempre ripulita prima di
-  /// mostrarla (vedi `HtmlSanitizer`).
+  /// The `text/html` part as it arrives: always clean it before showing it
+  /// (see `HtmlSanitizer`).
   final String? html;
 
-  /// Gli allegati.
+  /// The attachments.
   final List<AttachmentInfo> attachments;
 
-  /// Immagini dentro il messaggio, per `Content-ID` (senza `<` `>`).
+  /// Images inside the message, by `Content-ID` (without `<` `>`).
   final Map<String, InlineImage> inlineImages;
 }
 
-/// Un'immagine allegata e richiamata nell'HTML con `cid:`.
+/// An attached image referenced in the HTML with `cid:`.
 @immutable
 class InlineImage {
-  /// Crea un'immagine in linea.
+  /// Creates an inline image.
   const InlineImage({required this.mimeType, required this.bytes});
 
-  /// Tipo, es. `image/png`.
+  /// Type, e.g. `image/png`.
   final String mimeType;
 
-  /// I byte dell'immagine.
+  /// The image bytes.
   final Uint8List bytes;
 }
 
-/// Un file da allegare a un messaggio in uscita.
+/// A file to attach to an outgoing message.
 @immutable
 class OutgoingAttachment {
-  /// Crea un allegato in uscita.
+  /// Creates an outgoing attachment.
   const OutgoingAttachment({
     required this.fileName,
     required this.mimeType,
     required this.bytes,
   });
 
-  /// Nome del file.
+  /// File name.
   final String fileName;
 
-  /// Tipo MIME.
+  /// MIME type.
   final String mimeType;
 
-  /// Contenuto.
+  /// Content.
   final Uint8List bytes;
 }
 
-/// Un messaggio da inviare. Solo testo semplice nell'MVP.
+/// A message to send. Plain text only in the MVP.
 @immutable
 class OutgoingMessage {
-  /// Crea un messaggio in uscita.
+  /// Creates an outgoing message.
   const OutgoingMessage({
     required this.from,
     required this.to,
@@ -387,33 +387,33 @@ class OutgoingMessage {
     this.references = const [],
   });
 
-  /// Mittente.
+  /// Sender.
   final Address from;
 
-  /// Destinatari.
+  /// Recipients.
   final List<Address> to;
 
-  /// Copia.
+  /// Cc.
   final List<Address> cc;
 
-  /// Copia nascosta.
+  /// Bcc.
   final List<Address> bcc;
 
-  /// Oggetto.
+  /// Subject.
   final String subject;
 
-  /// Testo semplice.
+  /// Plain text.
   final String body;
 
-  /// Allegati.
+  /// Attachments.
   final List<OutgoingAttachment> attachments;
 
-  /// `Message-ID` del messaggio a cui rispondo.
+  /// `Message-ID` of the message being answered.
   final String? inReplyTo;
 
-  /// Catena `References`.
+  /// `References` chain.
   final List<String> references;
 
-  /// Tutti i destinatari, per la busta SMTP.
+  /// All recipients, for the SMTP envelope.
   List<Address> get allRecipients => [...to, ...cc, ...bcc];
 }

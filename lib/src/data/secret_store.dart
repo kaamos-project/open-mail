@@ -1,30 +1,30 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-/// Dove vivono i segreti (le password degli account).
+/// Where secrets (the account passwords) live.
 ///
-/// È un'interfaccia perché nei test non c'è un portachiavi vero: si usa
+/// It is an interface because tests have no real keychain: they use
 /// [MemorySecretStore].
 abstract interface class SecretStore {
-  /// `true` se il portachiavi di sistema funziona. Su Linux senza
-  /// GNOME Keyring o KWallet risponde `false`, e l'app non parte (scelta di
-  /// Alessio: meglio non avviarsi che salvare password in chiaro).
+  /// `true` if the system keychain works. On Linux without GNOME Keyring or
+  /// KWallet it answers `false` and the app doesn't start (Alessio's choice:
+  /// better not to start than to store passwords in plain text).
   Future<bool> isAvailable();
 
-  /// Legge un segreto, `null` se non c'è.
+  /// Reads a secret, `null` if missing.
   Future<String?> read(String key);
 
-  /// Salva o sostituisce un segreto.
+  /// Saves or replaces a secret.
   Future<void> write(String key, String value);
 
-  /// Cancella un segreto.
+  /// Deletes a secret.
   Future<void> delete(String key);
 }
 
-/// Il portachiavi di sistema tramite `flutter_secure_storage`:
-/// Gestione credenziali su Windows, Keychain su macOS e iOS, Keystore su
-/// Android, Secret Service su Linux.
+/// The system keychain via `flutter_secure_storage`: DPAPI-encrypted file on
+/// Windows, Keychain on macOS and iOS, Keystore on Android, Secret Service on
+/// Linux.
 class SystemSecretStore implements SecretStore {
-  /// Crea il collegamento al portachiavi.
+  /// Creates the keychain link.
   SystemSecretStore([FlutterSecureStorage? storage])
     : _storage = storage ?? const FlutterSecureStorage();
 
@@ -34,8 +34,8 @@ class SystemSecretStore implements SecretStore {
 
   @override
   Future<bool> isAvailable() async {
-    // Non c'è un'API "esiste il portachiavi?": l'unico test affidabile è
-    // provare a scrivere, rileggere e cancellare un valore.
+    // There is no "is there a keychain?" API: the only reliable test is
+    // writing, reading back and deleting a value.
     try {
       await _storage.write(key: _probeKey, value: 'ok');
       final value = await _storage.read(key: _probeKey);
@@ -57,16 +57,16 @@ class SystemSecretStore implements SecretStore {
   Future<void> delete(String key) => _storage.delete(key: key);
 }
 
-/// Segreti in memoria, solo per i test.
+/// In-memory secrets, for tests only.
 class MemorySecretStore implements SecretStore {
-  /// Crea un portachiavi finto. Con [available] falso simula Linux senza
+  /// Creates a fake keychain. With [available] false it simulates Linux without
   /// Secret Service.
   MemorySecretStore({this.available = true});
 
-  /// Risposta di [isAvailable].
+  /// Answer of [isAvailable].
   bool available;
 
-  /// I valori salvati, visibili ai test.
+  /// The saved values, visible to tests.
   final Map<String, String> values = {};
 
   @override

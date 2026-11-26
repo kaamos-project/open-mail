@@ -12,11 +12,11 @@ import '../views/message_view.dart';
 import '../widgets/common.dart';
 import '../widgets/mail_icons.dart';
 
-/// Da questa larghezza in su: tre colonne (desktop). Sotto: pagine una
-/// sopra l'altra (mobile).
+/// From this width up: three columns (desktop). Below: pages stacked on each
+/// other (mobile).
 const double desktopBreakpoint = 900;
 
-/// Una pagina senza animazione con lo sfondo del tema, per il Navigator.
+/// A page with no animation and the theme background, for the Navigator.
 Route<T> mailPage<T>(WidgetBuilder builder) => PageRouteBuilder<T>(
   transitionDuration: Duration.zero,
   reverseTransitionDuration: Duration.zero,
@@ -26,9 +26,9 @@ Route<T> mailPage<T>(WidgetBuilder builder) => PageRouteBuilder<T>(
   ),
 );
 
-/// La casella: tre colonne su desktop, pagine su mobile.
+/// The mailbox: three columns on desktop, pages on mobile.
 class MailHome extends StatefulWidget {
-  /// Crea la casella per [controller].
+  /// Creates the mailbox for [controller].
   const MailHome({
     super.key,
     required this.controller,
@@ -41,28 +41,28 @@ class MailHome extends StatefulWidget {
     this.onLeaveUnified,
   });
 
-  /// Lo stato della casella.
+  /// The mailbox state.
   final MailboxController controller;
 
-  /// "Rimuovi account": cancella account, password e cache.
+  /// "Remove account": deletes account, password and cache.
   final VoidCallback onRemoveAccount;
 
-  /// Tutti gli account, per passare dall'uno all'altro.
+  /// All accounts, to switch between them.
   final List<Account> accounts;
 
-  /// Mostra un altro account.
+  /// Shows another account.
   final ValueChanged<String>? onSelectAccount;
 
-  /// Apre l'aggiunta di un account.
+  /// Opens the add-account screen.
   final VoidCallback? onAddAccount;
 
-  /// L'Inbox unificata, se è quella mostrata.
+  /// The unified Inbox, if it is the one shown.
   final UnifiedInbox? unified;
 
-  /// Mostra "Tutte le caselle". `null` con un account solo.
+  /// Shows "Tutte le caselle" (all inboxes). `null` with a single account.
   final VoidCallback? onShowUnified;
 
-  /// Torna alle cartelle dell'account.
+  /// Goes back to the account's folders.
   final VoidCallback? onLeaveUnified;
 
   @override
@@ -70,18 +70,18 @@ class MailHome extends StatefulWidget {
 }
 
 class _MailHomeState extends State<MailHome> {
-  /// Su desktop la scrittura prende il posto del lettore.
+  /// On desktop, composing takes the place of the reader.
   ComposeDraft? _desktopDraft;
 
-  /// L'account da cui si scrive (una risposta dall'Inbox unificata parte
-  /// dall'account del messaggio).
+  /// The account to write from (a reply from the unified Inbox starts from the
+  /// message's account).
   MailboxController? _draftFrom;
   int _draftKey = 0;
 
   MailboxController get _c => widget.controller;
 
-  /// Il controller del messaggio nel lettore: nell'Inbox unificata è
-  /// quello dell'account del messaggio aperto.
+  /// The controller of the message in the reader: in the unified Inbox it is
+  /// the one of the open message's account.
   MailboxController get _reader => widget.unified?.openController ?? _c;
 
   void _compose(
@@ -120,8 +120,8 @@ class _MailHomeState extends State<MailHome> {
     _show(context, item.controller, desktop);
   }
 
-  /// Mostra il messaggio aperto in [c]: su desktop nel lettore, su mobile
-  /// in una pagina nuova.
+  /// Shows the message open in [c]: on desktop in the reader, on mobile in a
+  /// new page.
   void _show(BuildContext context, MailboxController c, bool desktop) {
     if (desktop) {
       setState(() => _desktopDraft = null);
@@ -143,7 +143,7 @@ class _MailHomeState extends State<MailHome> {
     );
   }
 
-  /// La colonna dei messaggi: Inbox unificata o cartella dell'account.
+  /// The message column: unified Inbox or the account's folder.
   Widget _list(BuildContext context, bool desktop, {Widget? leading}) {
     final unified = widget.unified;
     if (unified != null) {
@@ -160,7 +160,7 @@ class _MailHomeState extends State<MailHome> {
     );
   }
 
-  /// Scegliere una cartella esce dall'Inbox unificata.
+  /// Choosing a folder leaves the unified Inbox.
   void _folderChosen() {
     if (widget.unified != null) widget.onLeaveUnified?.call();
   }
@@ -220,7 +220,7 @@ class _MailHomeState extends State<MailHome> {
     }
   }
 
-  /// Rimuovere è irreversibile in locale: si chiede conferma.
+  /// Removing can't be undone locally: ask for confirmation.
   Future<void> _confirmRemove(BuildContext context) async {
     final ok = await showKaamosDialog<bool>(
       context: context,
@@ -290,11 +290,11 @@ class _MailHomeState extends State<MailHome> {
     );
   }
 
-  /// Il lettore su desktop. Nell'Inbox unificata cambia controller quando
-  /// apri un messaggio di un altro account, quindi ascolta la vista.
+  /// The desktop reader. In the unified Inbox its controller changes when you
+  /// open a message of another account, so it listens to the view.
   Widget _desktopReader(BuildContext context) {
     Widget reader() => MessageView(
-      // Cambiando account il lettore riparte pulito.
+      // Switching account restarts the reader clean.
       key: ValueKey(_reader.account.id),
       controller: _reader,
       onCompose: (d) => _compose(context, d, true, _reader),
@@ -400,7 +400,7 @@ class _MailHomeState extends State<MailHome> {
   }
 }
 
-/// Una riga della lista account nel dialog.
+/// A row of the account list in the dialog.
 class _AccountRow extends StatelessWidget {
   const _AccountRow({
     required this.account,

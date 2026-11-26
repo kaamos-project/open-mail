@@ -10,7 +10,7 @@ void main() {
   String clean(String html, {bool allowRemote = false}) =>
       sanitizer.sanitize(html, allowRemote: allowRemote).document;
 
-  test('toglie script, iframe, form con tutto il contenuto', () {
+  test('removes script, iframe, form with all their content', () {
     final doc = clean(
       '<p>ok</p><script>alert(1)</script><iframe src="x"></iframe>'
       '<form><input name="pwd"></form>',
@@ -21,7 +21,7 @@ void main() {
     expect(doc, isNot(contains('pwd')));
   });
 
-  test('toglie gli attributi on* e i link javascript:', () {
+  test('removes on* attributes and javascript: links', () {
     final doc = clean(
       '<a href="javascript:alert(1)" onclick="x()">a</a>'
       '<a href="https://kaamos.dev">b</a><img src="x" onerror="y()">',
@@ -32,7 +32,7 @@ void main() {
     expect(doc, contains('href="https://kaamos.dev"'));
   });
 
-  test('blocca le immagini remote e le conta', () {
+  test('blocks remote images and counts them', () {
     final r = sanitizer.sanitize(
       '<img src="https://track.er/p.gif">'
       '<div style="background: url(https://track.er/bg.png)">x</div>',
@@ -41,7 +41,7 @@ void main() {
     expect(r.document, isNot(contains('track.er')));
   });
 
-  test('con allowRemote le immagini restano', () {
+  test('with allowRemote images stay', () {
     final r = sanitizer.sanitize(
       '<img src="https://esempio.org/foto.jpg">',
       allowRemote: true,
@@ -50,7 +50,7 @@ void main() {
     expect(r.document, contains('https://esempio.org/foto.jpg'));
   });
 
-  test('cid: diventa data: con le immagini interne', () {
+  test('cid: becomes data: with the inline images', () {
     final r = sanitizer.sanitize(
       '<img src="cid:logo@x">',
       inlineImages: {
@@ -63,14 +63,14 @@ void main() {
     expect(r.document, contains('src="data:image/png;base64,AQID"'));
   });
 
-  test('la pagina ha la CSP e niente referrer', () {
+  test('the page has the CSP and no referrer', () {
     final doc = clean('<p>x</p>');
     expect(doc, contains('Content-Security-Policy'));
     expect(doc, contains("default-src 'none'"));
     expect(doc, contains('no-referrer'));
   });
 
-  test('CSS pericoloso viene tolto', () {
+  test('dangerous CSS is removed', () {
     final doc = clean(
       '<style>@import url(https://x.y/a.css); p { width: expression(alert(1)) }</style>'
       '<p style="color: red">x</p>',
@@ -80,7 +80,7 @@ void main() {
     expect(doc, contains('color: red'));
   });
 
-  test('tiene sfondo e colori del body originale', () {
+  test('keeps the original body background and colours', () {
     final doc = clean(
       '<html><body bgcolor="#1a1a1a" text="#ffffff" '
       'style="background-color: #222; margin: 0" onload="x()">'
@@ -92,7 +92,7 @@ void main() {
     expect(doc, isNot(contains('onload')));
   });
 
-  test('lo sfondo remoto del body resta bloccato', () {
+  test('a remote body background stays blocked', () {
     final r = sanitizer.sanitize(
       '<body background="https://track.er/bg.png" '
       'style="background: url(https://track.er/x.png)">x</body>',
@@ -101,12 +101,12 @@ void main() {
     expect(r.blockedRemote, 2);
   });
 
-  test('negli attributi del body non si esce dalle virgolette', () {
+  test('body attributes cannot break out of the quotes', () {
     final doc = clean('<body text="red&quot; onload=&quot;x()">x</body>');
     expect(doc, isNot(contains('onload')));
   });
 
-  test('le regole per la modalità scura restano spente', () {
+  test('dark mode rules stay off', () {
     final doc = clean(
       '<style>@media (prefers-color-scheme: dark) { p { color: #fff } }'
       '@media screen and (PREFERS-COLOR-SCHEME:dark) { a { color: #eee } }'

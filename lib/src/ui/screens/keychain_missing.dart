@@ -3,14 +3,14 @@ import 'package:kaamos_project_ui/kaamos_project_ui.dart';
 
 import '../widgets/mail_icons.dart';
 
-/// Mostrata quando il portachiavi di sistema non funziona (di solito Linux
-/// senza GNOME Keyring o KWallet). L'app non parte: salvare le password in
-/// chiaro non è un'opzione.
+/// Shown when the system keychain doesn't work (usually Linux without GNOME
+/// Keyring or KWallet). The app doesn't start: storing passwords in plain text
+/// is not an option.
 class KeychainMissingScreen extends StatelessWidget {
-  /// Crea la schermata.
+  /// Creates the screen.
   const KeychainMissingScreen({super.key, required this.onRetry});
 
-  /// Riprova dopo che l'utente ha installato il portachiavi.
+  /// Retries after the user has installed a keychain.
   final VoidCallback onRetry;
 
   @override

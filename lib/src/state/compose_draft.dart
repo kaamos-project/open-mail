@@ -1,27 +1,27 @@
 import '../core/models.dart';
 import '../core/text_utils.dart';
 
-/// Come si è arrivati alla schermata di scrittura.
+/// How the compose screen was reached.
 enum ComposeKind {
-  /// Messaggio nuovo.
+  /// New message.
   fresh,
 
-  /// Rispondi.
+  /// Reply.
   reply,
 
-  /// Rispondi a tutti.
+  /// Reply all.
   replyAll,
 
-  /// Inoltra.
+  /// Forward.
   forward,
 }
 
-/// Il punto di partenza di un messaggio da scrivere.
+/// The starting point of a message to write.
 ///
-/// È logica pura (niente widget): così le regole di "Rispondi a tutti"
-/// (chi va in A, chi in Cc, togliere se stessi) si provano con un test.
+/// It is pure logic (no widgets): so the "Reply all" rules (who goes in To, who
+/// in Cc, removing yourself) can be checked with a test.
 class ComposeDraft {
-  /// Crea una bozza.
+  /// Creates a draft.
   const ComposeDraft({
     this.kind = ComposeKind.fresh,
     this.to = const [],
@@ -34,11 +34,11 @@ class ComposeDraft {
     this.answeredPath,
   });
 
-  /// Bozza di risposta a [original] per l'account [me]. [path] è la
-  /// cartella di [original].
+  /// Reply draft to [original] for the account [me]. [path] is the folder of
+  /// [original].
   ///
-  /// Si risponde a `Reply-To` se c'è, altrimenti al mittente. Con [all] gli
-  /// altri destinatari vanno in Cc, senza doppioni e senza noi stessi.
+  /// Replies go to `Reply-To` if present, otherwise to the sender. With [all]
+  /// the other recipients go in Cc, without duplicates and without ourselves.
   factory ComposeDraft.reply(
     MessageContent original, {
     required Account me,
@@ -55,8 +55,8 @@ class ComposeDraft {
         if (seen.add(a.email.toLowerCase())) cc.add(a);
       }
     }
-    // Se il messaggio l'abbiamo scritto noi (es. dagli Inviati) non ha senso
-    // rispondere a noi stessi: teniamo la lista solo se resta vuota.
+    // If we wrote the message ourselves (e.g. from Sent) replying to ourselves
+    // makes no sense: keep the list only if it would end up empty.
     final others = to.where((a) => a.email.toLowerCase() != mine).toList();
     final refs = [
       ...original.references,
@@ -75,39 +75,38 @@ class ComposeDraft {
     );
   }
 
-  /// Bozza di inoltro di [original].
+  /// Forward draft of [original].
   factory ComposeDraft.forward(MessageContent original) => ComposeDraft(
     kind: ComposeKind.forward,
     subject: forwardSubject(original.summary.subject),
     body: forwardBody(original),
   );
 
-  /// Tipo di bozza.
+  /// Draft kind.
   final ComposeKind kind;
 
-  /// Destinatari.
+  /// Recipients.
   final List<Address> to;
 
-  /// Copia.
+  /// Cc.
   final List<Address> cc;
 
-  /// Oggetto.
+  /// Subject.
   final String subject;
 
-  /// Corpo in testo semplice.
+  /// Plain text body.
   final String body;
 
-  /// `Message-ID` del messaggio a cui si risponde.
+  /// `Message-ID` of the message being answered.
   final String? inReplyTo;
 
-  /// Catena dei `Message-ID` della conversazione.
+  /// Chain of the conversation's `Message-ID`s.
   final List<String> references;
 
-  /// UID del messaggio da segnare come "risposto" dopo l'invio.
+  /// UID of the message to mark as "answered" after sending.
   final int? answeredUid;
 
-  /// Cartella di [answeredUid]. `null`: quella aperta. Serve quando si
-  /// risponde dall'Inbox unificata mentre l'account guarda un'altra
-  /// cartella.
+  /// Folder of [answeredUid]. `null`: the open one. Needed when replying from
+  /// the unified Inbox while the account shows another folder.
   final String? answeredPath;
 }

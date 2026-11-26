@@ -32,7 +32,7 @@ MessageContent _content({
 );
 
 void main() {
-  test('Rispondi va al mittente con oggetto e catena', () {
+  test('reply goes to the sender with subject and chain', () {
     final d = ComposeDraft.reply(_content(), me: testAccount);
     expect(d.to.single.email, 'marta@esempio.org');
     expect(d.cc, isEmpty);
@@ -42,7 +42,7 @@ void main() {
     expect(d.answeredUid, 9);
   });
 
-  test('Reply-To vince sul mittente', () {
+  test('Reply-To wins over the sender', () {
     final d = ComposeDraft.reply(
       _content(replyTo: const [Address('lista@esempio.org')]),
       me: testAccount,
@@ -50,7 +50,7 @@ void main() {
     expect(d.to.single.email, 'lista@esempio.org');
   });
 
-  test('Rispondi a tutti: altri in Cc, senza noi e senza doppioni', () {
+  test('reply all: others in Cc, without us and without duplicates', () {
     final d = ComposeDraft.reply(
       _content(
         to: const [Address('ALESSIO@esempio.org'), Address('luca@esempio.org')],
@@ -67,7 +67,7 @@ void main() {
     expect(d.cc.map((a) => a.email), ['luca@esempio.org', 'sara@esempio.org']);
   });
 
-  test('la risposta ricorda la cartella del messaggio', () {
+  test('the reply remembers the message folder', () {
     final d = ComposeDraft.reply(_content(), me: testAccount, path: 'INBOX');
     expect(d.answeredPath, 'INBOX');
     expect(
@@ -76,7 +76,7 @@ void main() {
     );
   });
 
-  test('Inoltra: oggetto Fwd e nessun destinatario', () {
+  test('forward: Fwd subject and no recipients', () {
     final d = ComposeDraft.forward(_content());
     expect(d.to, isEmpty);
     expect(d.subject, 'Fwd: Gita');

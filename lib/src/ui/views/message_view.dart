@@ -12,9 +12,9 @@ import '../widgets/common.dart';
 import '../widgets/mail_icons.dart';
 import '../widgets/text_area.dart';
 
-/// Il messaggio aperto: intestazione, azioni, corpo e allegati.
+/// The open message: header, actions, body and attachments.
 class MessageView extends StatelessWidget {
-  /// Crea la vista.
+  /// Creates the view.
   const MessageView({
     super.key,
     required this.controller,
@@ -22,13 +22,13 @@ class MessageView extends StatelessWidget {
     this.onBack,
   });
 
-  /// Lo stato della casella.
+  /// The mailbox state.
   final MailboxController controller;
 
-  /// Rispondi / inoltra: apre la scrittura con questa bozza.
+  /// Reply / forward: opens compose with this draft.
   final ValueChanged<ComposeDraft> onCompose;
 
-  /// Su mobile: torna alla lista. Su desktop `null`.
+  /// On mobile: back to the list. On desktop `null`.
   final VoidCallback? onBack;
 
   @override
@@ -72,8 +72,8 @@ class MessageView extends StatelessWidget {
             ],
           );
         }
-        // La chiave sull'UID: cambiando messaggio lo stato (immagini
-        // caricate, documento ripulito) riparte da zero.
+        // Keyed on the UID: switching message resets the state (loaded images,
+        // cleaned document).
         return _MessageBody(
           key: ValueKey(content.summary.uid),
           controller: controller,
@@ -137,9 +137,8 @@ class _MessageBodyState extends State<_MessageBody> {
     _sanitize();
   }
 
-  // La pulizia gira sul thread della UI: per mail normali sono pochi
-  // millisecondi. Se diventasse lenta (newsletter enormi) si sposta in un
-  // Isolate con `compute`.
+  // Cleaning runs on the UI thread: a few milliseconds for normal mail. If it
+  // ever gets slow (huge newsletters) it moves to an Isolate with `compute`.
   void _sanitize() {
     final html = widget.content.html;
     if (html == null) return;
@@ -183,12 +182,12 @@ class _MessageBodyState extends State<_MessageBody> {
     final c = widget.controller;
     final m = widget.content;
     final s = m.summary;
-    // La stella cambia nella lista (aggiornamento ottimistico), non nel
-    // contenuto già scaricato: la leggiamo da lì.
+    // The star changes in the list (optimistic update), not in the content
+    // already downloaded: read it from there.
     final flagged = c.openSummary?.flagged ?? s.flagged;
     final me = c.account;
-    // Il messaggio può venire da una cartella diversa da quella aperta
-    // (Inbox unificata): ogni azione dice da quale.
+    // The message may come from a folder other than the open one (unified
+    // Inbox): every action says which.
     final path = c.openPath;
     final folder = c.openFolder;
     final archive = c.folderWithRole(FolderRole.archive);
