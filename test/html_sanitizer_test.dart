@@ -105,4 +105,16 @@ void main() {
     final doc = clean('<body text="red&quot; onload=&quot;x()">x</body>');
     expect(doc, isNot(contains('onload')));
   });
+
+  test('le regole per la modalità scura restano spente', () {
+    final doc = clean(
+      '<style>@media (prefers-color-scheme: dark) { p { color: #fff } }'
+      '@media screen and (PREFERS-COLOR-SCHEME:dark) { a { color: #eee } }'
+      '@media (prefers-color-scheme: light) { b { color: #000 } }</style>'
+      '<p>x</p>',
+    );
+    expect(doc.toLowerCase(), isNot(contains('prefers-color-scheme: dark')));
+    expect(doc.toLowerCase(), isNot(contains('prefers-color-scheme:dark')));
+    expect(doc, contains('prefers-color-scheme: light'));
+  });
 }

@@ -199,6 +199,14 @@ class HtmlSanitizer {
         .replaceAll(RegExp(r'expression\s*\(', caseSensitive: false), '(')
         .replaceAll(RegExp(r'@import[^;]*;?', caseSensitive: false), '')
         .replaceAll(RegExp(r'javascript:', caseSensitive: false), '')
+        // Le regole "modalità scura" della mail mettono il testo chiaro e si
+        // aspettano che il client scurisca lo sfondo; noi lo teniamo bianco.
+        // Una media query con una caratteristica sconosciuta non è mai vera,
+        // quindi quei blocchi restano spenti su ogni piattaforma.
+        .replaceAll(
+          RegExp(r'prefers-color-scheme\s*:\s*dark', caseSensitive: false),
+          'kaamos-dark-mode-off',
+        )
         .replaceAllMapped(_cssUrl, (m) {
           final inner = m
               .group(1)!
@@ -271,7 +279,7 @@ class HtmlSanitizer {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer">
 <style>
-html { background: #ffffff; color: #111111; }
+html { background: #ffffff; color: #111111; color-scheme: light only; }
 body { margin: 0; padding: 16px; min-height: 100vh; box-sizing: border-box; font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 15px; line-height: 1.5; overflow-wrap: anywhere; }
 img { max-width: 100%; height: auto; }
 table { max-width: 100%; }
