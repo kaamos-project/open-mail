@@ -65,7 +65,7 @@ destinatari SMTP.
 |---|---|---|
 | IMAP/SMTP | `enough_mail` | la libreria Dart più usata e testata, MPL-2.0 |
 | Cache | `sqlite3` | SQLite diretto, senza ORM: poche tabelle, query semplici |
-| Portachiavi | `flutter_secure_storage` | Keychain, Credential Manager, Keystore |
+| Portachiavi | `flutter_secure_storage` | Keychain su Apple, DPAPI su Windows, Keystore su Android |
 | Mail HTML | `flutter_inappwebview` | WebView con controllo su JS e navigazione |
 | File | `file_picker`, `open_filex`, `path_provider`, `url_launcher` | |
 | UI | `kaamos_project_ui` | il design system Kaamos (dipendenza git) |
@@ -90,7 +90,10 @@ flutter test
 ## Note per piattaforma
 
 - **Windows**: la WebView usa WebView2 (già presente su Windows 10/11
-  aggiornati). Le password vanno nel Credential Manager.
+  aggiornati). Le password stanno in `flutter_secure_storage.dat` nella
+  cartella dati dell'app, cifrate con DPAPI: la chiave è legata al tuo
+  utente Windows. Per compilare con Visual Studio 2026 servono il
+  componente ATL e la macro in `windows/CMakeLists.txt` (vedi il commento lì).
 - **macOS**: l'app è in sandbox con il permesso `network.client`. Se il
   portachiavi rifiuta di salvare, va aggiunta la capability "Keychain
   Sharing" in Xcode (serve un team di firma).
