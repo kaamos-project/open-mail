@@ -191,7 +191,8 @@ class MailCache {
     });
   }
 
-  /// Le righe più recenti (UID più alto = arrivato dopo).
+  /// Le righe più recenti per data. A parità di data (o senza data) vince
+  /// l'UID più alto, cioè l'ultimo arrivato.
   List<MessageSummary> loadSummaries(
     String accountId,
     String path, {
@@ -199,7 +200,7 @@ class MailCache {
   }) {
     final rows = _db.select(
       '''SELECT * FROM messages WHERE account_id = ? AND path = ?
-         ORDER BY uid DESC LIMIT ?''',
+         ORDER BY COALESCE(date_ms, 0) DESC, uid DESC LIMIT ?''',
       [accountId, path, limit],
     );
     return [for (final r in rows) _rowToSummary(r)];

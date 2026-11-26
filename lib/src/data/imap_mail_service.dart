@@ -194,6 +194,15 @@ class ImapMailService implements MailService {
   @override
   Future<List<int>> listUids(String path) => _withRetry(() async {
     final (client, _) = await _select(path);
+    // Con SORT (RFC 5256) il server ci dà gli UID già in ordine di data:
+    // l'UID dice solo quando il messaggio è entrato nella cartella, e una
+    // mail vecchia appena archiviata avrebbe l'UID più alto.
+    if (client.serverInfo.supports('SORT')) {
+      final sorted = await client.uidSortMessages('DATE');
+      return sorted.matchingSequence?.toList() ?? <int>[];
+    }
+    // Senza SORT (es. Gmail): ordine di arrivo nella cartella. La lista
+    // mostrata viene comunque riordinata per data dalla cache.
     final result = await client.uidSearchMessages(searchCriteria: 'ALL');
     final uids = result.matchingSequence?.toList() ?? <int>[];
     uids.sort();

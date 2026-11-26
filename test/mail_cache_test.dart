@@ -62,4 +62,22 @@ void main() {
     cache.deleteAccount('b');
     expect(cache.loadSummaries('b', 'INBOX'), isEmpty);
   });
+
+  test('ordina per data, non per UID', () {
+    final old = summary(1);
+    final moved = MessageSummary(
+      uid: 99, // UID alto: è appena entrato nella cartella
+      from: old.from,
+      to: old.to,
+      subject: 'vecchio',
+      date: DateTime.utc(2020),
+      preview: '',
+      seen: true,
+      flagged: false,
+      answered: false,
+      hasAttachments: false,
+    );
+    cache.upsertSummaries('a', 'Archive', [summary(5), moved, summary(3)]);
+    expect(cache.loadSummaries('a', 'Archive').map((m) => m.uid), [5, 3, 99]);
+  });
 }

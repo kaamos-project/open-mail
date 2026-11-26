@@ -129,7 +129,15 @@ class FakeMailService implements MailService {
   @override
   Future<List<int>> listUids(String path) async {
     _check();
-    return folders[path]!.messages.keys.toList()..sort();
+    // Come un server con SORT: in ordine di data, dal più vecchio.
+    final f = folders[path]!;
+    final uids = f.messages.keys.toList()
+      ..sort((a, b) {
+        final da = f.messages[a]!.date, db = f.messages[b]!.date;
+        final byDate = (da ?? DateTime(0)).compareTo(db ?? DateTime(0));
+        return byDate != 0 ? byDate : a.compareTo(b);
+      });
+    return uids;
   }
 
   @override

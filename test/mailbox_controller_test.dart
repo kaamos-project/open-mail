@@ -172,4 +172,13 @@ void main() {
     expect(c.error, isNotNull);
     expect(c.messages, hasLength(10));
   });
+
+  test('in Archivio conta la data, non quando l\'hai spostata', () async {
+    await c.start();
+    await c.archive([24]);
+    await c.archive([1]); // il più vecchio, archiviato per ultimo
+    await c.selectFolder(c.folderWithRole(FolderRole.archive)!);
+    // UID 1 = messaggio 24 (recente), UID 2 = messaggio 1 (vecchio).
+    expect(c.messages.map((m) => m.subject), ['Oggetto 24', 'Oggetto 1']);
+  });
 }

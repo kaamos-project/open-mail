@@ -14,7 +14,8 @@ abstract interface class MailService {
   /// Apre (SELECT) una cartella e ne restituisce lo stato.
   Future<FolderStatus> openFolder(String path);
 
-  /// Gli UID di tutti i messaggi della cartella, dal più vecchio.
+  /// Gli UID di tutti i messaggi della cartella, dal più vecchio al più
+  /// recente per data se il server sa ordinare (SORT), altrimenti per UID.
   Future<List<int>> listUids(String path);
 
   /// I riassunti dei messaggi con questi [uids].
