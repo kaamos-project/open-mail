@@ -40,6 +40,10 @@ class MailboxController extends ChangeNotifier {
   /// Quanti messaggi scaricare per volta.
   final int pageSize;
 
+  /// Quante date di arrivo chiedere per comando: ~50 byte l'una, quindi un
+  /// blocco è circa 100 KB.
+  static const _dateChunk = 2000;
+
   final Future<MailService> Function() _connect;
   MailService? _service;
   Future<MailService>? _connecting;
@@ -147,19 +151,44 @@ class MailboxController extends ChangeNotifier {
   Future<void> _syncFolder(MailService service, String path) async {
     final status = await service.openFolder(path);
     cache.checkUidValidity(account.id, path, status.uidValidity);
-    final serverUids = await service.listUids(path);
-    _serverUids = serverUids;
-    final serverSet = serverUids.toSet();
-    final cached = cache.cachedUids(account.id, path);
+    final serverSet = (await service.listUids(path)).toSet();
 
     // Spariti dal server: cancellati o spostati da un altro client.
+    final dated = cache.datedUids(account.id, path);
     cache.removeUids(
       account.id,
       path,
-      cached.where((u) => !serverSet.contains(u)),
+      {
+        ...cache.cachedUids(account.id, path),
+        ...dated,
+      }.where((u) => !serverSet.contains(u)),
     );
 
-    // La finestra visibile: gli ultimi N messaggi.
+    // Le date di arrivo dei messaggi mai visti: la prima volta tutte, poi
+    // solo i nuovi. A blocchi, per non mandare comandi enormi.
+    final undated = [
+      for (final u in serverSet)
+        if (!dated.contains(u)) u,
+    ]..sort();
+    for (var i = 0; i < undated.length; i += _dateChunk) {
+      final chunk = undated.sublist(
+        i,
+        math.min(i + _dateChunk, undated.length),
+      );
+      cache.saveArrivalDates(
+        account.id,
+        path,
+        await service.fetchArrivalDates(path, chunk),
+      );
+    }
+
+    // Ordine per data (non per UID: una mail vecchia appena spostata ha
+    // l'UID più alto della cartella).
+    final serverUids = cache.uidsByArrival(account.id, path);
+    _serverUids = serverUids;
+    final cached = cache.cachedUids(account.id, path);
+
+    // La finestra visibile: gli ultimi N messaggi per data.
     _window = math.min(math.max(_window, pageSize), serverUids.length);
     final window = serverUids.sublist(serverUids.length - _window);
     final cachedSet = cached.toSet();

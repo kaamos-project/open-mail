@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kaamos_mail/src/core/models.dart';
 import 'package:kaamos_mail/src/data/mail_cache.dart';
+import 'package:sqlite3/sqlite3.dart';
 
 import 'support/fakes.dart';
 
@@ -79,5 +82,33 @@ void main() {
     );
     cache.upsertSummaries('a', 'Archive', [summary(5), moved, summary(3)]);
     expect(cache.loadSummaries('a', 'Archive').map((m) => m.uid), [5, 3, 99]);
+  });
+
+  test('indice delle date: ordine, e pulizia insieme ai messaggi', () {
+    cache.saveArrivalDates('a', 'INBOX', {
+      1: DateTime.utc(2026, 3),
+      2: DateTime.utc(2026, 1),
+      3: DateTime.utc(2026, 2),
+    });
+    expect(cache.uidsByArrival('a', 'INBOX'), [2, 3, 1]);
+    expect(cache.datedUids('a', 'INBOX'), {1, 2, 3});
+    cache.removeUids('a', 'INBOX', [3]);
+    expect(cache.uidsByArrival('a', 'INBOX'), [2, 1]);
+    cache.checkUidValidity('a', 'INBOX', 5);
+    expect(cache.datedUids('a', 'INBOX'), isEmpty);
+  });
+
+  test('una cache della versione 1 si ricrea da zero', () async {
+    final dir = await Directory.systemTemp.createTemp('kaamos_cache');
+    addTearDown(() => dir.delete(recursive: true));
+    final path = '${dir.path}/mail.db';
+    sqlite3.open(path)
+      ..execute('CREATE TABLE messages (uid INTEGER); PRAGMA user_version = 1;')
+      ..close();
+    final upgraded = MailCache.open(path);
+    addTearDown(upgraded.close);
+    upgraded.upsertSummaries('a', 'INBOX', [summary(1)]);
+    upgraded.saveArrivalDates('a', 'INBOX', {1: DateTime.utc(2026)});
+    expect(upgraded.loadSummaries('a', 'INBOX').single.uid, 1);
   });
 }

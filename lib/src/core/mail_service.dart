@@ -14,9 +14,13 @@ abstract interface class MailService {
   /// Apre (SELECT) una cartella e ne restituisce lo stato.
   Future<FolderStatus> openFolder(String path);
 
-  /// Gli UID di tutti i messaggi della cartella, dal più vecchio al più
-  /// recente per data se il server sa ordinare (SORT), altrimenti per UID.
+  /// Gli UID di tutti i messaggi della cartella, crescenti.
   Future<List<int>> listUids(String path);
+
+  /// La data in cui il server ha ricevuto ciascun messaggio (`INTERNALDATE`).
+  /// Non cambia quando il messaggio viene spostato: serve a ordinare per
+  /// data su qualsiasi server, anche senza l'estensione SORT (es. Gmail).
+  Future<Map<int, DateTime>> fetchArrivalDates(String path, List<int> uids);
 
   /// I riassunti dei messaggi con questi [uids].
   Future<List<MessageSummary>> fetchSummaries(String path, List<int> uids);

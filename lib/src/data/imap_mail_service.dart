@@ -194,20 +194,28 @@ class ImapMailService implements MailService {
   @override
   Future<List<int>> listUids(String path) => _withRetry(() async {
     final (client, _) = await _select(path);
-    // Con SORT (RFC 5256) il server ci dà gli UID già in ordine di data:
-    // l'UID dice solo quando il messaggio è entrato nella cartella, e una
-    // mail vecchia appena archiviata avrebbe l'UID più alto.
-    if (client.serverInfo.supports('SORT')) {
-      final sorted = await client.uidSortMessages('DATE');
-      return sorted.matchingSequence?.toList() ?? <int>[];
-    }
-    // Senza SORT (es. Gmail): ordine di arrivo nella cartella. La lista
-    // mostrata viene comunque riordinata per data dalla cache.
     final result = await client.uidSearchMessages(searchCriteria: 'ALL');
     final uids = result.matchingSequence?.toList() ?? <int>[];
     uids.sort();
     return uids;
   });
+
+  @override
+  Future<Map<int, DateTime>> fetchArrivalDates(String path, List<int> uids) {
+    if (uids.isEmpty) return Future.value(const {});
+    return _withRetry(() async {
+      final (client, _) = await _select(path);
+      final result = await client.uidFetchMessages(
+        em.MessageSequence.fromIds(uids, isUid: true),
+        '(UID INTERNALDATE)',
+      );
+      return {
+        for (final m in result.messages)
+          if (m.uid != null && parseInternalDate(m.internalDate) != null)
+            m.uid!: parseInternalDate(m.internalDate)!,
+      };
+    });
+  }
 
   @override
   Future<List<MessageSummary>> fetchSummaries(String path, List<int> uids) {
@@ -612,4 +620,46 @@ String decodePartialText(
   } on Object {
     return utf8.decode(text.codeUnits, allowMalformed: true);
   }
+}
+
+const _imapMonths = {
+  'jan': 1,
+  'feb': 2,
+  'mar': 3,
+  'apr': 4,
+  'may': 5,
+  'jun': 6,
+  'jul': 7,
+  'aug': 8,
+  'sep': 9,
+  'oct': 10,
+  'nov': 11,
+  'dec': 12,
+};
+
+/// Legge una data IMAP `INTERNALDATE`, es. `" 6-Nov-2026 21:04:13 +0100"`
+/// (RFC 3501: il giorno può avere uno spazio davanti). Restituisce l'ora UTC
+/// o `null` se il formato non torna.
+DateTime? parseInternalDate(String? value) {
+  if (value == null) return null;
+  final m = RegExp(
+    r'(\d{1,2})-([A-Za-z]{3})-(\d{4}) (\d{2}):(\d{2}):(\d{2}) ([+-])(\d{2})(\d{2})',
+  ).firstMatch(value);
+  if (m == null) return null;
+  final month = _imapMonths[m.group(2)!.toLowerCase()];
+  if (month == null) return null;
+  final local = DateTime.utc(
+    int.parse(m.group(3)!),
+    month,
+    int.parse(m.group(1)!),
+    int.parse(m.group(4)!),
+    int.parse(m.group(5)!),
+    int.parse(m.group(6)!),
+  );
+  final offset = Duration(
+    hours: int.parse(m.group(8)!),
+    minutes: int.parse(m.group(9)!),
+  );
+  // "+0100" vuol dire un'ora avanti rispetto a UTC: per avere UTC si toglie.
+  return m.group(7) == '+' ? local.subtract(offset) : local.add(offset);
 }

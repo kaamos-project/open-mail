@@ -33,12 +33,19 @@ class MailCache {
 
   final Database _db;
 
-  static const _schemaVersion = 1;
+  static const _schemaVersion = 2;
 
   void _migrate() {
     _db.execute('PRAGMA journal_mode = WAL');
     final version = _db.select('PRAGMA user_version').first.columnAt(0) as int;
     if (version >= _schemaVersion) return;
+    // È una cache: invece di migrare i dati si riparte da zero e si
+    // riscarica tutto dal server. Molto più semplice e senza rischi.
+    _db.execute('''
+      DROP TABLE IF EXISTS messages;
+      DROP TABLE IF EXISTS folders;
+      DROP TABLE IF EXISTS arrival_dates;
+    ''');
     _db.execute('''
       CREATE TABLE IF NOT EXISTS folders (
         account_id TEXT NOT NULL,
@@ -64,6 +71,18 @@ class MailCache {
         has_attachments INTEGER NOT NULL,
         PRIMARY KEY (account_id, path, uid)
       ) STRICT, WITHOUT ROWID;
+      -- Indice leggero di TUTTI i messaggi della cartella (anche quelli
+      -- mai mostrati): uid -> data di arrivo, per ordinare e paginare per
+      -- data su qualsiasi server.
+      CREATE TABLE IF NOT EXISTS arrival_dates (
+        account_id TEXT NOT NULL,
+        path TEXT NOT NULL,
+        uid INTEGER NOT NULL,
+        arrival_ms INTEGER NOT NULL,
+        PRIMARY KEY (account_id, path, uid)
+      ) STRICT, WITHOUT ROWID;
+      CREATE INDEX IF NOT EXISTS arrival_order
+        ON arrival_dates (account_id, path, arrival_ms, uid);
       PRAGMA user_version = $_schemaVersion;
     ''');
   }
@@ -121,6 +140,10 @@ class MailCache {
         accountId,
         path,
       ])
+      ..execute('DELETE FROM arrival_dates WHERE account_id = ? AND path = ?', [
+        accountId,
+        path,
+      ])
       ..execute('DELETE FROM folders WHERE account_id = ? AND path = ?', [
         accountId,
         path,
@@ -143,6 +166,10 @@ class MailCache {
           accountId,
           path,
         ])
+        ..execute(
+          'DELETE FROM arrival_dates WHERE account_id = ? AND path = ?',
+          [accountId, path],
+        )
         ..execute(
           '''INSERT INTO folders (account_id, path, name, role, uid_validity)
              VALUES (?, ?, ?, 'other', ?)
@@ -191,16 +218,19 @@ class MailCache {
     });
   }
 
-  /// Le righe più recenti per data. A parità di data (o senza data) vince
-  /// l'UID più alto, cioè l'ultimo arrivato.
+  /// Le righe più recenti per data di arrivo (dall'indice; se manca, la
+  /// data della mail). A parità vince l'UID più alto.
   List<MessageSummary> loadSummaries(
     String accountId,
     String path, {
     int limit = 200,
   }) {
     final rows = _db.select(
-      '''SELECT * FROM messages WHERE account_id = ? AND path = ?
-         ORDER BY COALESCE(date_ms, 0) DESC, uid DESC LIMIT ?''',
+      '''SELECT m.* FROM messages m
+         LEFT JOIN arrival_dates d USING (account_id, path, uid)
+         WHERE m.account_id = ? AND m.path = ?
+         ORDER BY COALESCE(d.arrival_ms, m.date_ms, 0) DESC, m.uid DESC
+         LIMIT ?''',
       [accountId, path, limit],
     );
     return [for (final r in rows) _rowToSummary(r)];
@@ -239,6 +269,46 @@ class MailCache {
       r['uid'] as int,
   ];
 
+  /// Gli UID che hanno già la data di arrivo nell'indice.
+  Set<int> datedUids(String accountId, String path) => {
+    for (final r in _db.select(
+      'SELECT uid FROM arrival_dates WHERE account_id = ? AND path = ?',
+      [accountId, path],
+    ))
+      r['uid'] as int,
+  };
+
+  /// Salva le date di arrivo nell'indice.
+  void saveArrivalDates(
+    String accountId,
+    String path,
+    Map<int, DateTime> dates,
+  ) {
+    if (dates.isEmpty) return;
+    _transaction(() {
+      final stmt = _db.prepare('''
+        INSERT INTO arrival_dates (account_id, path, uid, arrival_ms)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT (account_id, path, uid) DO UPDATE SET
+          arrival_ms = excluded.arrival_ms
+      ''');
+      for (final MapEntry(key: uid, value: date) in dates.entries) {
+        stmt.execute([accountId, path, uid, date.millisecondsSinceEpoch]);
+      }
+      stmt.close();
+    });
+  }
+
+  /// Gli UID dell'indice dal più vecchio al più recente per data di arrivo.
+  List<int> uidsByArrival(String accountId, String path) => [
+    for (final r in _db.select(
+      '''SELECT uid FROM arrival_dates WHERE account_id = ? AND path = ?
+         ORDER BY arrival_ms, uid''',
+      [accountId, path],
+    ))
+      r['uid'] as int,
+  ];
+
   /// Aggiorna solo i flag.
   void updateFlags(
     String accountId,
@@ -265,18 +335,25 @@ class MailCache {
     });
   }
 
-  /// Toglie dalla cache i messaggi spariti dal server (o spostati).
+  /// Toglie dalla cache (righe e indice delle date) i messaggi spariti dal
+  /// server (o spostati).
   void removeUids(String accountId, String path, Iterable<int> uids) {
     final list = uids.toList();
     if (list.isEmpty) return;
     _transaction(() {
-      final stmt = _db.prepare(
+      final messages = _db.prepare(
         'DELETE FROM messages WHERE account_id = ? AND path = ? AND uid = ?',
       );
+      final dates = _db.prepare(
+        'DELETE FROM arrival_dates '
+        'WHERE account_id = ? AND path = ? AND uid = ?',
+      );
       for (final uid in list) {
-        stmt.execute([accountId, path, uid]);
+        messages.execute([accountId, path, uid]);
+        dates.execute([accountId, path, uid]);
       }
-      stmt.close();
+      messages.close();
+      dates.close();
     });
   }
 
@@ -285,6 +362,7 @@ class MailCache {
     _transaction(() {
       _db
         ..execute('DELETE FROM messages WHERE account_id = ?', [accountId])
+        ..execute('DELETE FROM arrival_dates WHERE account_id = ?', [accountId])
         ..execute('DELETE FROM folders WHERE account_id = ?', [accountId]);
     });
   }

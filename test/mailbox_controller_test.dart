@@ -181,4 +181,32 @@ void main() {
     // UID 1 = messaggio 24 (recente), UID 2 = messaggio 1 (vecchio).
     expect(c.messages.map((m) => m.subject), ['Oggetto 24', 'Oggetto 1']);
   });
+
+  test('la prima pagina sono i più recenti per data, non per UID', () async {
+    // UID 1 (il più basso) è però la mail più recente.
+    final m = server.folders['INBOX']!.messages[1]!;
+    server.folders['INBOX']!.messages[1] = MessageSummary(
+      uid: 1,
+      from: m.from,
+      to: m.to,
+      subject: 'Recentissima',
+      date: DateTime.utc(2027),
+      preview: '',
+      seen: false,
+      flagged: false,
+      answered: false,
+      hasAttachments: false,
+    );
+    await c.start();
+    expect(c.messages.first.subject, 'Recentissima');
+    expect(c.messages, hasLength(10));
+  });
+
+  test('le date si scaricano una volta sola, poi solo le nuove', () async {
+    await c.start();
+    expect(server.fetchedDates, 25);
+    server.folders['INBOX']!.messages[26] = summary(26);
+    await c.refresh();
+    expect(server.fetchedDates, 26);
+  });
 }
