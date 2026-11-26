@@ -147,4 +147,27 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text(secondAccount.email), findsOneWidget);
   });
+
+  testWidgets('più account: tutte le caselle insieme', (tester) async {
+    final accounts = MemoryAccountRepository(secrets);
+    await accounts.save(testAccount, 'p');
+    await accounts.save(secondAccount, 'p');
+    await pumpApp(tester, accounts: accounts);
+
+    await tester.tap(find.bySemanticsLabel('Tutte le caselle'));
+    await tester.pumpAndSettle();
+    // Lo stesso server finto per i due account: ogni messaggio c'è due
+    // volte, una per account, con l'indirizzo sotto.
+    expect(find.text('Oggetto 5'), findsNWidgets(2));
+    expect(find.text(secondAccount.email), findsWidgets);
+
+    await tester.tap(find.text('Oggetto 5').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Testo del messaggio 5'), findsOneWidget);
+
+    // Una cartella riporta alle cartelle dell'account.
+    await tester.tap(find.bySemanticsLabel('Posta in arrivo'));
+    await tester.pumpAndSettle();
+    expect(find.text('Oggetto 5'), findsOneWidget);
+  });
 }

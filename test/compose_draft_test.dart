@@ -67,6 +67,15 @@ void main() {
     expect(d.cc.map((a) => a.email), ['luca@esempio.org', 'sara@esempio.org']);
   });
 
+  test('la risposta ricorda la cartella del messaggio', () {
+    final d = ComposeDraft.reply(_content(), me: testAccount, path: 'INBOX');
+    expect(d.answeredPath, 'INBOX');
+    expect(
+      ComposeDraft.reply(_content(), me: testAccount).answeredPath,
+      isNull,
+    );
+  });
+
   test('Inoltra: oggetto Fwd e nessun destinatario', () {
     final d = ComposeDraft.forward(_content());
     expect(d.to, isEmpty);

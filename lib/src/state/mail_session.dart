@@ -5,6 +5,7 @@ import '../core/models.dart';
 import '../data/account_repository.dart';
 import '../data/mail_cache.dart';
 import 'mailbox_controller.dart';
+import 'unified_inbox.dart';
 
 /// Tutti gli account e quello mostrato adesso.
 ///
@@ -36,7 +37,15 @@ class MailSession extends ChangeNotifier {
   List<Account> accounts = const [];
 
   String? _activeId;
+  UnifiedInbox? _unified;
   bool _disposed = false;
+
+  /// L'Inbox unificata, se è quella mostrata.
+  UnifiedInbox? get unified => _unified;
+
+  /// Ha senso offrire l'Inbox unificata: con un account solo sarebbe
+  /// uguale alla sua Inbox.
+  bool get canUnify => accounts.length > 1;
 
   /// L'account mostrato (`null` se non ce ne sono).
   Account? get active =>
@@ -76,11 +85,53 @@ class MailSession extends ChangeNotifier {
     _notify();
   }
 
-  /// Mostra l'account [id].
+  /// Mostra l'account [id] (ed esce dall'Inbox unificata).
   void select(String id) {
-    if (_activeId == id) return;
+    if (_activeId == id && _unified == null) return;
+    _closeUnified();
     _activeId = id;
     _notify();
+  }
+
+  /// Mostra le Inbox di tutti gli account insieme.
+  ///
+  /// Avvia i controller di tutti gli account: ognuno apre la sua
+  /// connessione e aggiorna la sua Inbox.
+  void showUnified() {
+    if (!canUnify || _unified != null) return;
+    // Un messaggio aperto prima resterebbe nel lettore senza essere nella
+    // lista: meglio partire puliti.
+    controller?.closeMessage();
+    final unified = UnifiedInbox(
+      controllers: [for (final a in accounts) controllerFor(a)],
+    );
+    _unified = unified;
+    _notify();
+    unified.refresh();
+  }
+
+  /// Torna alla cartella dell'account mostrato.
+  void leaveUnified() {
+    if (_unified == null) return;
+    _closeUnified();
+    _notify();
+  }
+
+  void _closeUnified() {
+    final unified = _unified;
+    if (unified == null) return;
+    _unified = null;
+    unified.openController?.closeMessage();
+    unified.dispose();
+  }
+
+  void _updateUnified() {
+    if (_unified == null) return;
+    if (!canUnify) {
+      _closeUnified();
+    } else {
+      _unified!.setControllers([for (final a in accounts) controllerFor(a)]);
+    }
   }
 
   /// Un account appena salvato: diventa quello mostrato.
@@ -91,17 +142,20 @@ class MailSession extends ChangeNotifier {
       account,
     ];
     _activeId = account.id;
+    _updateUnified();
     _notify();
   }
 
   /// Rimuove un account: controller, password e cache.
   Future<void> remove(String id) async {
-    _controllers.remove(id)?.dispose();
+    final removed = _controllers.remove(id);
     accounts = [
       for (final a in accounts)
         if (a.id != id) a,
     ];
     if (_activeId == id) _activeId = accounts.firstOrNull?.id;
+    _updateUnified();
+    removed?.dispose();
     _notify();
     await repository.remove(id);
     cache.deleteAccount(id);
@@ -114,6 +168,8 @@ class MailSession extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _unified?.dispose();
+    _unified = null;
     for (final c in _controllers.values) {
       c.dispose();
     }

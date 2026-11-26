@@ -224,16 +224,45 @@ class MailCache {
     String accountId,
     String path, {
     int limit = 200,
+  }) => [for (final (m, _) in loadSorted(accountId, path, limit: limit)) m];
+
+  /// Come [loadSummaries], con la data usata per ordinare (millisecondi):
+  /// serve all'Inbox unificata per mescolare più account nello stesso
+  /// ordine.
+  List<(MessageSummary, int)> loadSorted(
+    String accountId,
+    String path, {
+    int limit = 200,
   }) {
     final rows = _db.select(
-      '''SELECT m.* FROM messages m
+      '''SELECT m.*, COALESCE(d.arrival_ms, m.date_ms, 0) AS sort_ms
+         FROM messages m
          LEFT JOIN arrival_dates d USING (account_id, path, uid)
          WHERE m.account_id = ? AND m.path = ?
-         ORDER BY COALESCE(d.arrival_ms, m.date_ms, 0) DESC, m.uid DESC
+         ORDER BY sort_ms DESC, m.uid DESC
          LIMIT ?''',
       [accountId, path, limit],
     );
-    return [for (final r in rows) _rowToSummary(r)];
+    return [for (final r in rows) (_rowToSummary(r), r['sort_ms'] as int)];
+  }
+
+  /// Le righe salvate per questi UID (quelle che ci sono).
+  List<MessageSummary> summariesFor(
+    String accountId,
+    String path,
+    Iterable<int> uids,
+  ) {
+    final stmt = _db.prepare(
+      'SELECT * FROM messages WHERE account_id = ? AND path = ? AND uid = ?',
+    );
+    final result = <MessageSummary>[];
+    for (final uid in uids) {
+      for (final r in stmt.select([accountId, path, uid])) {
+        result.add(_rowToSummary(r));
+      }
+    }
+    stmt.close();
+    return result;
   }
 
   static MessageSummary _rowToSummary(Row r) {

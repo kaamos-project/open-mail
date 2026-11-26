@@ -4,6 +4,7 @@ import 'package:kaamos_project_ui/kaamos_project_ui.dart';
 import '../../core/models.dart';
 import '../../state/compose_draft.dart';
 import '../../state/mailbox_controller.dart';
+import '../../state/unified_inbox.dart';
 import '../views/compose.dart';
 import '../views/folder_list.dart';
 import '../views/message_list.dart';
@@ -35,6 +36,9 @@ class MailHome extends StatefulWidget {
     this.accounts = const [],
     this.onSelectAccount,
     this.onAddAccount,
+    this.unified,
+    this.onShowUnified,
+    this.onLeaveUnified,
   });
 
   /// Lo stato della casella.
@@ -52,6 +56,15 @@ class MailHome extends StatefulWidget {
   /// Apre l'aggiunta di un account.
   final VoidCallback? onAddAccount;
 
+  /// L'Inbox unificata, se è quella mostrata.
+  final UnifiedInbox? unified;
+
+  /// Mostra "Tutte le caselle". `null` con un account solo.
+  final VoidCallback? onShowUnified;
+
+  /// Torna alle cartelle dell'account.
+  final VoidCallback? onLeaveUnified;
+
   @override
   State<MailHome> createState() => _MailHomeState();
 }
@@ -59,14 +72,29 @@ class MailHome extends StatefulWidget {
 class _MailHomeState extends State<MailHome> {
   /// Su desktop la scrittura prende il posto del lettore.
   ComposeDraft? _desktopDraft;
+
+  /// L'account da cui si scrive (una risposta dall'Inbox unificata parte
+  /// dall'account del messaggio).
+  MailboxController? _draftFrom;
   int _draftKey = 0;
 
   MailboxController get _c => widget.controller;
 
-  void _compose(BuildContext context, ComposeDraft draft, bool desktop) {
+  /// Il controller del messaggio nel lettore: nell'Inbox unificata è
+  /// quello dell'account del messaggio aperto.
+  MailboxController get _reader => widget.unified?.openController ?? _c;
+
+  void _compose(
+    BuildContext context,
+    ComposeDraft draft,
+    bool desktop, [
+    MailboxController? from,
+  ]) {
+    final c = from ?? _c;
     if (desktop) {
       setState(() {
         _desktopDraft = draft;
+        _draftFrom = c;
         _draftKey++;
       });
       return;
@@ -74,7 +102,7 @@ class _MailHomeState extends State<MailHome> {
     Navigator.of(context).push<void>(
       mailPage(
         (context) => ComposeView(
-          controller: _c,
+          controller: c,
           draft: draft,
           onClose: () => Navigator.of(context).pop(),
         ),
@@ -84,6 +112,17 @@ class _MailHomeState extends State<MailHome> {
 
   void _open(BuildContext context, MessageSummary m, bool desktop) {
     _c.open(m.uid);
+    _show(context, _c, desktop);
+  }
+
+  void _openUnified(BuildContext context, UnifiedItem item, bool desktop) {
+    widget.unified?.openItem(item);
+    _show(context, item.controller, desktop);
+  }
+
+  /// Mostra il messaggio aperto in [c]: su desktop nel lettore, su mobile
+  /// in una pagina nuova.
+  void _show(BuildContext context, MailboxController c, bool desktop) {
     if (desktop) {
       setState(() => _desktopDraft = null);
       return;
@@ -92,16 +131,38 @@ class _MailHomeState extends State<MailHome> {
       mailPage(
         (context) => PopScope<void>(
           onPopInvokedWithResult: (didPop, _) {
-            if (didPop) _c.closeMessage();
+            if (didPop) c.closeMessage();
           },
           child: MessageView(
-            controller: _c,
+            controller: c,
             onBack: () => Navigator.of(context).maybePop(),
-            onCompose: (draft) => _compose(context, draft, false),
+            onCompose: (draft) => _compose(context, draft, false, c),
           ),
         ),
       ),
     );
+  }
+
+  /// La colonna dei messaggi: Inbox unificata o cartella dell'account.
+  Widget _list(BuildContext context, bool desktop, {Widget? leading}) {
+    final unified = widget.unified;
+    if (unified != null) {
+      return UnifiedMessageList(
+        inbox: unified,
+        leading: leading,
+        onOpen: (item) => _openUnified(context, item, desktop),
+      );
+    }
+    return MessageList(
+      controller: _c,
+      leading: leading,
+      onOpen: (m) => _open(context, m, desktop),
+    );
+  }
+
+  /// Scegliere una cartella esce dall'Inbox unificata.
+  void _folderChosen() {
+    if (widget.unified != null) widget.onLeaveUnified?.call();
   }
 
   Future<void> _showAccount(BuildContext context) async {
@@ -206,33 +267,43 @@ class _MailHomeState extends State<MailHome> {
           child: FolderList(
             controller: _c,
             onCompose: () => _compose(context, const ComposeDraft(), true),
-            onSelected: (_) {},
+            onSelected: (_) => _folderChosen(),
             onAccount: () => _showAccount(context),
+            onUnified: widget.onShowUnified,
+            unified: widget.unified != null,
           ),
         ),
         const VerticalHairline(),
-        SizedBox(
-          width: listWidth,
-          child: MessageList(
-            controller: _c,
-            onOpen: (m) => _open(context, m, true),
-          ),
-        ),
+        SizedBox(width: listWidth, child: _list(context, true)),
         const VerticalHairline(),
         Expanded(
           child: draft != null
               ? ComposeView(
                   key: ValueKey(_draftKey),
-                  controller: _c,
+                  controller: _draftFrom ?? _c,
                   draft: draft,
                   onClose: () => setState(() => _desktopDraft = null),
                 )
-              : MessageView(
-                  controller: _c,
-                  onCompose: (d) => _compose(context, d, true),
-                ),
+              : _desktopReader(context),
         ),
       ],
+    );
+  }
+
+  /// Il lettore su desktop. Nell'Inbox unificata cambia controller quando
+  /// apri un messaggio di un altro account, quindi ascolta la vista.
+  Widget _desktopReader(BuildContext context) {
+    Widget reader() => MessageView(
+      // Cambiando account il lettore riparte pulito.
+      key: ValueKey(_reader.account.id),
+      controller: _reader,
+      onCompose: (d) => _compose(context, d, true, _reader),
+    );
+    final unified = widget.unified;
+    if (unified == null) return reader();
+    return ListenableBuilder(
+      listenable: unified,
+      builder: (context, _) => reader(),
     );
   }
 
@@ -242,9 +313,9 @@ class _MailHomeState extends State<MailHome> {
       child: Stack(
         children: [
           Positioned.fill(
-            child: MessageList(
-              controller: _c,
-              onOpen: (m) => _open(context, m, false),
+            child: _list(
+              context,
+              false,
               leading: MailIconButton(
                 icon: MailIcon.folder,
                 label: 'Cartelle',
@@ -275,8 +346,18 @@ class _MailHomeState extends State<MailHome> {
                               Navigator.of(pageContext).pop();
                               _compose(context, const ComposeDraft(), false);
                             },
-                            onSelected: (_) => Navigator.of(pageContext).pop(),
+                            onSelected: (_) {
+                              Navigator.of(pageContext).pop();
+                              _folderChosen();
+                            },
                             onAccount: () => _showAccount(pageContext),
+                            onUnified: widget.onShowUnified == null
+                                ? null
+                                : () {
+                                    Navigator.of(pageContext).pop();
+                                    widget.onShowUnified!();
+                                  },
+                            unified: widget.unified != null,
                           ),
                         ),
                       ],

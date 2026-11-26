@@ -4,6 +4,7 @@ import 'package:kaamos_project_ui/kaamos_project_ui.dart';
 import '../../core/models.dart';
 import '../../core/text_utils.dart';
 import '../../state/mailbox_controller.dart';
+import '../../state/unified_inbox.dart';
 import '../widgets/common.dart';
 import '../widgets/mail_icons.dart';
 
@@ -158,7 +159,9 @@ class _MessageListState extends State<MessageList> {
         final m = c.messages[i];
         return MessageRow(
           message: m,
-          selected: m.uid == c.openUid,
+          selected:
+              m.uid == c.openUid &&
+              (c.openPath ?? c.current.path) == c.current.path,
           onPressed: () => widget.onOpen(m),
         );
       },
@@ -174,10 +177,14 @@ class MessageRow extends StatelessWidget {
     required this.message,
     required this.selected,
     required this.onPressed,
+    this.account,
   });
 
   /// Il messaggio.
   final MessageSummary message;
+
+  /// Nell'Inbox unificata: l'account del messaggio.
+  final String? account;
 
   /// È quello aperto.
   final bool selected;
@@ -200,6 +207,7 @@ class MessageRow extends StatelessWidget {
       date,
       if (m.flagged) 'Con stella',
       if (m.hasAttachments) 'Con allegati',
+      if (account != null) 'Account $account',
     ].join(', ');
     return Semantics(
       selected: selected,
@@ -309,6 +317,17 @@ class MessageRow extends StatelessWidget {
                             ),
                           ),
                         ],
+                        if (account != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            account!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: KaamosTypography.captionSm.copyWith(
+                              color: theme.mute,
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -318,6 +337,119 @@ class MessageRow extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+}
+
+/// Le Inbox di tutti gli account in una lista. Niente ricerca né "Carica
+/// altri" per ora: si cerca dentro l'account.
+class UnifiedMessageList extends StatelessWidget {
+  /// Crea la lista.
+  const UnifiedMessageList({
+    super.key,
+    required this.inbox,
+    required this.onOpen,
+    this.leading,
+  });
+
+  /// L'Inbox unificata.
+  final UnifiedInbox inbox;
+
+  /// Un messaggio è stato scelto.
+  final ValueChanged<UnifiedItem> onOpen;
+
+  /// Widget prima del titolo (su mobile: il bottone delle cartelle).
+  final Widget? leading;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = KaamosTheme.of(context);
+    return ListenableBuilder(
+      listenable: inbox,
+      builder: (context, _) {
+        final error = inbox.error;
+        final open = inbox.open;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
+              child: Row(
+                children: [
+                  if (leading != null) ...[leading!, const SizedBox(width: 8)],
+                  Expanded(
+                    child: Semantics(
+                      header: true,
+                      child: Text(
+                        'Tutte le caselle',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: KaamosTypography.headingSm.copyWith(
+                          color: theme.ink,
+                        ),
+                      ),
+                    ),
+                  ),
+                  MailIconButton(
+                    icon: MailIcon.refresh,
+                    label: inbox.syncing
+                        ? 'Aggiornamento in corso'
+                        : 'Aggiorna',
+                    onPressed: inbox.syncing ? null : inbox.refresh,
+                  ),
+                ],
+              ),
+            ),
+            if (error != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: MailBanner(
+                  icon: MailIcon.shield,
+                  danger: true,
+                  message: error,
+                  action: KaamosButton(
+                    variant: KaamosButtonVariant.install,
+                    onPressed: inbox.dismissError,
+                    child: const Text('Chiudi'),
+                  ),
+                ),
+              ),
+            const Hairline(),
+            Expanded(
+              child: inbox.items.isEmpty
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Text(
+                          inbox.syncing
+                              ? 'Sto scaricando i messaggi…'
+                              : 'Le Inbox sono vuote.',
+                          textAlign: TextAlign.center,
+                          style: KaamosTypography.bodySm.copyWith(
+                            color: theme.mute,
+                          ),
+                        ),
+                      ),
+                    )
+                  : ListView.builder(
+                      itemCount: inbox.items.length,
+                      itemBuilder: (context, i) {
+                        final item = inbox.items[i];
+                        return MessageRow(
+                          message: item.summary,
+                          account: item.account.email,
+                          selected:
+                              open != null &&
+                              open.accountId == item.account.id &&
+                              open.uid == item.summary.uid,
+                          onPressed: () => onOpen(item),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
