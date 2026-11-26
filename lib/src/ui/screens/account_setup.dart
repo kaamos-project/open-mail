@@ -6,11 +6,14 @@ import 'package:kaamos_project_ui/kaamos_project_ui.dart';
 
 import '../../core/mail_service.dart';
 import '../../core/models.dart';
+import '../../core/oauth.dart';
 import '../../core/text_utils.dart';
 import '../environment.dart';
+import '../widgets/common.dart';
 import '../widgets/mail_icons.dart';
 
-/// "Add an account": manual IMAP and SMTP, check, save.
+/// "Add an account": sign in with Google or Microsoft, or manual IMAP and
+/// SMTP; then check and save.
 class AccountSetupScreen extends StatefulWidget {
   /// Creates the screen. [onSaved] receives the freshly saved account.
   const AccountSetupScreen({super.key, required this.onSaved, this.onCancel});
@@ -42,6 +45,9 @@ class _AccountSetupScreenState extends State<AccountSetupScreen> {
   var _smtpState = _CheckState.idle;
   ConnectionCheckResult? _result;
   String? _formError;
+
+  /// The provider whose sign-in is running.
+  OAuthProvider? _signingIn;
 
   @override
   void initState() {
@@ -99,10 +105,7 @@ class _AccountSetupScreenState extends State<AccountSetupScreen> {
     } else {
       _formError = null;
       return Account(
-        // It only needs to be unique on this device.
-        id:
-            '${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}'
-            '${math.Random.secure().nextInt(1 << 30).toRadixString(36)}',
+        id: _newAccountId(),
         displayName: _name.text.trim().isEmpty
             ? email.split('@').first
             : _name.text.trim(),
@@ -123,12 +126,66 @@ class _AccountSetupScreenState extends State<AccountSetupScreen> {
     return null;
   }
 
+  /// It only needs to be unique on this device.
+  static String _newAccountId() =>
+      '${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}'
+      '${math.Random.secure().nextInt(1 << 30).toRadixString(36)}';
+
   Future<void> _verifyAndSave() async {
     final account = _buildAccount();
     if (account == null) {
       setState(() {});
       return;
     }
+    await _checkAndSave(account, _password.text, showInBoxes: true);
+  }
+
+  /// Signs in with [provider] in the browser, then checks and saves the
+  /// account with the provider's servers.
+  Future<void> _signIn(OAuthProvider provider) async {
+    final env = MailEnvironment.of(context);
+    final signIn = env.oauth;
+    if (signIn == null) return;
+    final config = oauthConfig(provider);
+    setState(() {
+      _signingIn = provider;
+      _formError = null;
+    });
+    try {
+      final result = await signIn.signIn(config);
+      if (!mounted) return;
+      final email = result.identity.email;
+      final account = Account(
+        id: _newAccountId(),
+        displayName: result.identity.name ?? email.split('@').first,
+        email: email,
+        username: email,
+        imap: config.imap,
+        smtp: config.smtp,
+        oauth: provider,
+      );
+      await _checkAndSave(account, result.tokens.refreshToken!);
+    } on OAuthException catch (e) {
+      if (mounted) setState(() => _formError = e.message);
+    } on Object {
+      if (mounted) {
+        setState(
+          () => _formError = 'Accesso con ${config.label} non riuscito.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _signingIn = null);
+    }
+  }
+
+  /// Checks IMAP and SMTP with [secret] (password or refresh token) and
+  /// saves. With [showInBoxes] the result shows in the server boxes;
+  /// otherwise errors go under the form.
+  Future<void> _checkAndSave(
+    Account account,
+    String secret, {
+    bool showInBoxes = false,
+  }) async {
     final env = MailEnvironment.of(context);
     // The same address on the same server twice would create two identical
     // mailboxes stepping on each other.
@@ -142,25 +199,31 @@ class _AccountSetupScreenState extends State<AccountSetupScreen> {
       setState(() => _formError = 'Questo account c\'è già.');
       return;
     }
-    setState(() {
-      _imapState = _CheckState.running;
-      _smtpState = _CheckState.running;
-      _result = null;
-    });
-    final result = await env.services.check(account, _password.text);
+    if (showInBoxes) {
+      setState(() {
+        _imapState = _CheckState.running;
+        _smtpState = _CheckState.running;
+        _result = null;
+      });
+    }
+    final result = await env.services.check(account, secret);
     if (!mounted) return;
     setState(() {
-      _result = result;
-      _imapState = result.imapError == null
-          ? _CheckState.ok
-          : _CheckState.failed;
-      _smtpState = result.smtpError == null
-          ? _CheckState.ok
-          : _CheckState.failed;
+      if (showInBoxes) {
+        _result = result;
+        _imapState = result.imapError == null
+            ? _CheckState.ok
+            : _CheckState.failed;
+        _smtpState = result.smtpError == null
+            ? _CheckState.ok
+            : _CheckState.failed;
+      } else if (!result.ok) {
+        _formError = result.imapError ?? result.smtpError;
+      }
     });
     if (!result.ok) return;
     try {
-      await env.accounts.save(account, _password.text);
+      await env.accounts.save(account, secret);
     } on Object {
       if (!mounted) return;
       setState(() => _formError = 'Non riesco a salvare nel portachiavi.');
@@ -170,7 +233,57 @@ class _AccountSetupScreenState extends State<AccountSetupScreen> {
   }
 
   bool get _busy =>
-      _imapState == _CheckState.running || _smtpState == _CheckState.running;
+      _signingIn != null ||
+      _imapState == _CheckState.running ||
+      _smtpState == _CheckState.running;
+
+  /// "Sign in with Google / Microsoft", only where the platform supports
+  /// it. A button without a client ID stays disabled and says why.
+  Widget? _providerButtons(BuildContext context) {
+    if (MailEnvironment.of(context).oauth == null) return null;
+    final theme = KaamosTheme.of(context);
+    final configs = [for (final p in OAuthProvider.values) oauthConfig(p)];
+    final missing = configs.where((c) => !c.isConfigured).toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final c in configs)
+              KaamosButton(
+                variant: KaamosButtonVariant.secondary,
+                onPressed: _busy || !c.isConfigured
+                    ? null
+                    : () => _signIn(c.provider),
+                child: Text(
+                  _signingIn == c.provider
+                      ? 'Completa l\'accesso nel browser…'
+                      : 'Accedi con ${c.label}',
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Text(
+          missing.isEmpty
+              ? 'Si apre il browser: la password la vede solo il provider.'
+              : 'Accesso con ${missing.map((c) => c.label).join(' e ')} non '
+                    'configurato in questa build (vedi docs/oauth.md).',
+          style: KaamosTypography.captionSm.copyWith(color: theme.mute),
+        ),
+        const SizedBox(height: 20),
+        const Hairline(),
+        const SizedBox(height: 20),
+        Text(
+          'Oppure configura IMAP e SMTP a mano',
+          style: KaamosTypography.bodySmStrong.copyWith(color: theme.ink),
+        ),
+        const SizedBox(height: 12),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -243,6 +356,7 @@ class _AccountSetupScreenState extends State<AccountSetupScreen> {
                           ),
                         ),
                         const SizedBox(height: 20),
+                        ?_providerButtons(context),
                         _twoUp(wide, [
                           _Labeled(
                             label: 'Nome visualizzato',
@@ -308,16 +422,19 @@ class _AccountSetupScreenState extends State<AccountSetupScreen> {
                           spacing: 8,
                           runSpacing: 12,
                           children: [
-                            ConstrainedBox(
-                              constraints: const BoxConstraints(maxWidth: 420),
-                              child: Text(
-                                'Usi Gmail o Outlook? Crea una password per app '
-                                'nelle impostazioni di sicurezza del tuo account.',
-                                style: KaamosTypography.captionSm.copyWith(
-                                  color: theme.mute,
+                            if (MailEnvironment.of(context).oauth == null)
+                              ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                  maxWidth: 420,
+                                ),
+                                child: Text(
+                                  'Usi Gmail o Outlook? Crea una password per app '
+                                  'nelle impostazioni di sicurezza del tuo account.',
+                                  style: KaamosTypography.captionSm.copyWith(
+                                    color: theme.mute,
+                                  ),
                                 ),
                               ),
-                            ),
                             if (widget.onCancel != null)
                               KaamosButton(
                                 variant: KaamosButtonVariant.secondary,

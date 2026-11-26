@@ -1,7 +1,9 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kaamos_mail/src/app.dart';
+import 'package:kaamos_mail/src/core/oauth.dart';
 import 'package:kaamos_mail/src/data/mail_cache.dart';
+import 'package:kaamos_mail/src/data/oauth_client.dart';
 import 'package:kaamos_mail/src/data/secret_store.dart';
 
 import 'mail_session_test.dart' show secondAccount;
@@ -23,6 +25,7 @@ void main() {
     WidgetTester tester, {
     required MemoryAccountRepository accounts,
     Size size = const Size(1400, 900),
+    OAuthSignIn? oauth,
   }) async {
     tester.view
       ..physicalSize = size
@@ -36,6 +39,7 @@ void main() {
         services: FakeMailServiceFactory(server),
         files: FakeFileActions(),
         htmlBody: (context, doc, onLink) => const Text('HTML'),
+        oauth: oauth,
       ),
     );
     await tester.pumpAndSettle();
@@ -57,6 +61,21 @@ void main() {
   testWidgets('first start: add-account screen', (tester) async {
     await pumpApp(tester, accounts: MemoryAccountRepository(secrets));
     expect(find.text('Aggiungi un account'), findsOneWidget);
+    expect(find.text('Accedi con Google'), findsNothing);
+  });
+
+  testWidgets('sign-in buttons say when a build has no client ID', (
+    tester,
+  ) async {
+    await pumpApp(
+      tester,
+      accounts: MemoryAccountRepository(secrets),
+      oauth: _NoSignIn(),
+    );
+    expect(find.text('Accedi con Google'), findsOneWidget);
+    expect(find.text('Accedi con Microsoft'), findsOneWidget);
+    // Tests run without --dart-define, so neither provider is configured.
+    expect(find.textContaining('non configurato'), findsOneWidget);
   });
 
   testWidgets('desktop: three columns, open a message and reply', (
@@ -170,4 +189,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Oggetto 5'), findsOneWidget);
   });
+}
+
+class _NoSignIn implements OAuthSignIn {
+  @override
+  Future<OAuthSignInResult> signIn(OAuthConfig config) =>
+      throw const OAuthException('not in tests');
 }

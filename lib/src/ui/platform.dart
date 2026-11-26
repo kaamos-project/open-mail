@@ -10,7 +10,9 @@ import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/models.dart';
+import '../core/oauth.dart';
 import '../core/text_utils.dart';
+import '../data/oauth_client.dart';
 import 'environment.dart';
 
 /// The WebView exists only on these platforms (`flutter_inappwebview` doesn't
@@ -30,6 +32,25 @@ Widget platformHtmlBody(
 ) {
   if (!webViewSupported) return UnsupportedHtmlBody(document: document);
   return SafeHtmlWebView(document: document, onOpenLink: onOpenLink);
+}
+
+/// Google and Microsoft sign-in for this platform.
+///
+/// Desktop only for now: it uses the loopback redirect, which needs a
+/// local server (allowed on macOS by the `network.server` entitlement).
+/// iOS and Android need a redirect to a custom URL scheme instead; they
+/// come in a later step.
+OAuthSignIn? platformOAuthSignIn() {
+  if (kIsWeb || !(Platform.isWindows || Platform.isMacOS || Platform.isLinux)) {
+    return null;
+  }
+  return LoopbackOAuthSignIn(
+    openBrowser: (url) async {
+      if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+        throw const OAuthException('Non riesco ad aprire il browser.');
+      }
+    },
+  );
 }
 
 /// A locked-down WebView for showing HTML mail.

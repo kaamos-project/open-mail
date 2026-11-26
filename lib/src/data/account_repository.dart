@@ -45,9 +45,13 @@ class AccountRepository {
     await _write(accounts);
   }
 
-  /// The password of an account.
+  /// The password of an account (the refresh token for OAuth2 accounts).
   Future<String?> password(String accountId) =>
       secrets.read(_passwordKey(accountId));
+
+  /// Replaces the keychain secret, e.g. a rotated refresh token.
+  Future<void> updatePassword(String accountId, String secret) =>
+      secrets.write(_passwordKey(accountId), secret);
 
   /// Removes the account and its password. The caller deletes the cache.
   Future<void> remove(String accountId) async {
