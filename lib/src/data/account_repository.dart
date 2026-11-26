@@ -4,27 +4,26 @@ import 'dart:io';
 import '../core/models.dart';
 import 'secret_store.dart';
 
-/// Salva gli account: la configurazione in un file JSON, la password nel
-/// portachiavi.
+/// Saves the accounts: the configuration in a JSON file, the password in the
+/// keychain.
 ///
-/// Perché due posti? Il file serve per ricordare server e porte e si può
-/// copiare o fare il backup senza rischi; la password invece non deve mai
-/// finire su disco in chiaro.
+/// Why two places? The file remembers servers and ports and can be copied or
+/// backed up safely; the password must never end up on disk in plain text.
 class AccountRepository {
-  /// Crea il repository. [file] è `accounts.json` nella cartella dati
-  /// dell'app.
+  /// Creates the repository. [file] is `accounts.json` in the app's data
+  /// folder.
   AccountRepository({required this.file, required this.secrets});
 
-  /// Il file JSON con gli account.
+  /// The JSON file with the accounts.
   final File file;
 
-  /// Il portachiavi.
+  /// The keychain.
   final SecretStore secrets;
 
   static String _passwordKey(String accountId) =>
       'kaamos_mail.account.$accountId.password';
 
-  /// Tutti gli account salvati (nell'MVP al massimo uno).
+  /// All saved accounts.
   Future<List<Account>> load() async {
     if (!file.existsSync()) return const [];
     final raw = jsonDecode(await file.readAsString()) as Map<String, Object?>;
@@ -33,10 +32,10 @@ class AccountRepository {
     return [for (final json in list) Account.fromJson(json)];
   }
 
-  /// Salva [account] (lo sostituisce se esiste già) e la sua [password].
+  /// Saves [account] (replacing it if it already exists) and its [password].
   Future<void> save(Account account, String password) async {
-    // Prima la password: se il portachiavi fallisce, non resta un account
-    // senza credenziali.
+    // Password first: if the keychain fails, no account is left without
+    // credentials.
     await secrets.write(_passwordKey(account.id), password);
     final accounts = [
       for (final a in await load())
@@ -46,11 +45,11 @@ class AccountRepository {
     await _write(accounts);
   }
 
-  /// La password di un account.
+  /// The password of an account.
   Future<String?> password(String accountId) =>
       secrets.read(_passwordKey(accountId));
 
-  /// Toglie l'account e la sua password. La cache la cancella chi chiama.
+  /// Removes the account and its password. The caller deletes the cache.
   Future<void> remove(String accountId) async {
     await secrets.delete(_passwordKey(accountId));
     await _write([
@@ -61,8 +60,8 @@ class AccountRepository {
 
   Future<void> _write(List<Account> accounts) async {
     await file.parent.create(recursive: true);
-    // Scrittura atomica: prima un file temporaneo, poi rename. Se l'app
-    // si chiude a metà, il file vecchio resta integro.
+    // Atomic write: a temporary file first, then rename. If the app quits
+    // halfway, the old file stays intact.
     final tmp = File('${file.path}.tmp');
     await tmp.writeAsString(
       const JsonEncoder.withIndent('  ').convert({

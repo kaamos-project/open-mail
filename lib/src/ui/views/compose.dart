@@ -11,8 +11,8 @@ import '../widgets/common.dart';
 import '../widgets/mail_icons.dart';
 import '../widgets/text_area.dart';
 
-/// Gli indirizzi di una riga (A, Cc, Ccn): i chip già confermati più il
-/// testo che si sta scrivendo.
+/// The addresses of one row (To, Cc, Bcc): the confirmed chips plus the text
+/// being typed.
 class _Recipients {
   _Recipients(List<Address> initial) : list = [...initial];
 
@@ -20,11 +20,11 @@ class _Recipients {
   final text = TextEditingController();
   final focus = FocusNode();
 
-  /// Indirizzi scritti ma non validi, da mostrare in rosso.
+  /// Addresses typed but not valid, to show in red.
   List<String> invalid = const [];
 
-  /// Trasforma in chip il testo scritto. Restituisce `false` se c'era
-  /// qualcosa di non valido (che resta nel campo).
+  /// Turns the typed text into chips. Returns `false` if something was invalid
+  /// (it stays in the field).
   bool commit() {
     final parsed = parseAddressList(text.text);
     for (final a in parsed.valid) {
@@ -45,10 +45,9 @@ class _Recipients {
   }
 }
 
-/// La schermata per scrivere un messaggio (solo testo semplice, come
-/// deciso per l'MVP).
+/// The screen for writing a message (plain text only, as decided for the MVP).
 class ComposeView extends StatefulWidget {
-  /// Crea la schermata partendo da [draft].
+  /// Creates the screen starting from [draft].
   const ComposeView({
     super.key,
     required this.controller,
@@ -56,13 +55,13 @@ class ComposeView extends StatefulWidget {
     required this.onClose,
   });
 
-  /// La casella da cui si invia.
+  /// The mailbox to send from.
   final MailboxController controller;
 
-  /// Il punto di partenza.
+  /// The starting point.
   final ComposeDraft draft;
 
-  /// Chiude la schermata (dopo l'invio, lo scarto o il salvataggio).
+  /// Closes the screen (after sending, discarding or saving).
   final VoidCallback onClose;
 
   @override
@@ -167,7 +166,7 @@ class _ComposeViewState extends State<ComposeView> {
     if (files.isNotEmpty && mounted) setState(() => _attachments.addAll(files));
   }
 
-  /// Chiudendo con qualcosa di scritto chiede se salvare la bozza.
+  /// Closing with something written asks whether to save the draft.
   Future<void> _close() async {
     if (!_hasContent) {
       widget.onClose();
@@ -361,8 +360,8 @@ class _ComposeViewState extends State<ComposeView> {
   }
 }
 
-/// Una riga "Etichetta: valore" con la linea sotto. Il valore sta subito
-/// dopo l'etichetta (8px), come nel mockup.
+/// A "Label: value" row with the line below. The value sits right after the
+/// label (8px), as in the mockup.
 class _FieldRow extends StatelessWidget {
   const _FieldRow({required this.label, required this.child, this.trailing});
 
@@ -412,7 +411,7 @@ class _RecipientRow extends StatelessWidget {
   final bool autofocus;
 
   void _onText(String value) {
-    // Virgola, punto e virgola o a capo chiudono un indirizzo.
+    // Comma, semicolon or newline closes an address.
     if (value.contains(RegExp(r'[,;\n]'))) {
       recipients.commit();
       onChanged();
@@ -467,8 +466,8 @@ class _RecipientRow extends StatelessWidget {
   }
 }
 
-/// Un chip con il bottone per toglierlo. Non va mai a capo e non si
-/// restringe (la correzione sul mockup "tutto schiacciato").
+/// A chip with the button to remove it. It never wraps and never shrinks (the
+/// "all squashed" fix on the mockup).
 class _Chip extends StatelessWidget {
   const _Chip({
     required this.label,
@@ -512,7 +511,8 @@ class _Chip extends StatelessWidget {
               ),
             ),
           ),
-          // Un nodo a sé: altrimenti lo screen reader fonde nome e "Togli".
+          // A node of its own: otherwise the screen reader merges the name and
+          // "Togli" (remove).
           Semantics(
             container: true,
             child: KaamosPressable(

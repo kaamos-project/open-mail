@@ -10,9 +10,9 @@ permissions:
 
 jobs:
   test:
-    # I test non toccano WebView, portachiavi o rete: girano su Linux.
-    # Le build native (Windows, macOS, iOS, Android) arriveranno con il
-    # flusso di release.
+    # Tests don't touch the WebView, keychain or network: they run on Linux.
+    # Native builds (Windows, macOS, iOS, Android) will come with the
+    # release workflow.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,7 +20,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
-          # Stessa versione della libreria kaamos_project_ui.
+          # Same version as the kaamos_project_ui library.
           flutter-version: 3.50.1
           cache: true
 

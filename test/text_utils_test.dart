@@ -6,7 +6,7 @@ import 'support/fakes.dart';
 
 void main() {
   group('parseAddressList', () {
-    test('separa nomi e indirizzi, tiene da parte quelli sbagliati', () {
+    test('splits names and addresses, keeps the invalid ones aside', () {
       final r = parseAddressList(
         'Marta Bianchi <marta@esempio.org>, luca@esempio.org; non-valido',
       );
@@ -18,7 +18,7 @@ void main() {
       expect(r.invalid, ['non-valido']);
     });
 
-    test('stringa vuota = niente', () {
+    test('empty string = nothing', () {
       final r = parseAddressList('  , ');
       expect(r.valid, isEmpty);
       expect(r.invalid, isEmpty);
@@ -31,14 +31,14 @@ void main() {
     expect(isValidEmail('a b@c.it'), isFalse);
   });
 
-  test('Re: e Fwd: non si raddoppiano', () {
+  test('Re: and Fwd: are not doubled', () {
     expect(replySubject('Ciao'), 'Re: Ciao');
     expect(replySubject('RE: Ciao'), 'RE: Ciao');
     expect(forwardSubject('Ciao'), 'Fwd: Ciao');
     expect(forwardSubject('I: Ciao'), 'I: Ciao');
   });
 
-  test('replyBody cita ogni riga con >', () {
+  test('replyBody quotes every line with >', () {
     final content = MessageContent(
       summary: summary(1),
       cc: const [],
@@ -55,7 +55,7 @@ void main() {
     expect(body, contains('> riga uno\n>\n> riga tre'));
   });
 
-  test('htmlToText toglie tag e stili', () {
+  test('htmlToText strips tags and styles', () {
     final text = htmlToText(
       '<style>p{color:red}</style><p>Ciao <b>Alessio</b></p>',
     );
@@ -63,13 +63,13 @@ void main() {
     expect(text, isNot(contains('color')));
   });
 
-  test('makePreview accorcia e compatta gli spazi', () {
+  test('makePreview shortens and collapses whitespace', () {
     final p = makePreview('uno\n\n  due ${'x' * 300}', maxLength: 20);
     expect(p.length, lessThanOrEqualTo(21));
     expect(p, startsWith('uno due'));
   });
 
-  test('formatListDate: oggi, ieri, data', () {
+  test('formatListDate: today, yesterday, date', () {
     final now = DateTime(2026, 11, 26, 18);
     expect(formatListDate(DateTime(2026, 11, 26, 9, 5), now: now), '09:05');
     expect(formatListDate(DateTime(2026, 11, 25, 9), now: now), 'Ieri');
@@ -88,7 +88,7 @@ void main() {
     expect(initials('marta@esempio.org'), 'MA');
   });
 
-  test('folderLabel in italiano', () {
+  test('folderLabel in Italian', () {
     expect(
       folderLabel(
         const Folder(path: 'INBOX', name: 'INBOX', role: FolderRole.inbox),
@@ -103,7 +103,7 @@ void main() {
     );
   });
 
-  test('imapQuote protegge virgolette e backslash', () {
+  test('imapQuote escapes quotes and backslashes', () {
     expect(imapQuote(r'a"b\c'), r'"a\"b\\c"');
   });
 

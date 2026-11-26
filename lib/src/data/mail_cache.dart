@@ -5,30 +5,29 @@ import 'package:sqlite3/sqlite3.dart';
 import '../core/mail_service.dart';
 import '../core/models.dart';
 
-/// Cache locale in SQLite: cartelle e righe della lista messaggi.
+/// Local SQLite cache: folders and message list rows.
 ///
-/// Serve a una cosa sola: aprire l'app e vedere subito la lista, mentre in
-/// sottofondo si chiede al server cosa è cambiato. Il server resta la fonte
-/// di verità; se cache e server non coincidono, vince il server.
+/// It serves a single purpose: open the app and see the list immediately, while
+/// the server is asked in the background what changed. The server stays the
+/// source of truth; if cache and server disagree, the server wins.
 ///
-/// I corpi dei messaggi non si salvano nell'MVP (lettura offline completa è
-/// in fase 2): si scaricano quando apri il messaggio.
+/// Message bodies are not stored in the MVP (full offline reading is phase 2):
+/// they are downloaded when you open the message.
 ///
-/// Perché `sqlite3` diretto e non `drift`? Niente generazione di codice e
-/// SQL scritto a mano, che è anche un buon esercizio. Il prezzo: le query
-/// non sono controllate a compile time, quindi i test della cache contano.
-/// Le query sono sincrone sul thread della UI: con pagine da 50 righe
-/// costano frazioni di millisecondo. Se un giorno diventano pesanti (ricerca
-/// full-text in fase 2) si spostano in un isolate.
+/// Why plain `sqlite3` and not `drift`? No code generation and hand-written
+/// SQL, which is also good practice. The price: queries aren't checked at
+/// compile time, so the cache tests matter. Queries run synchronously on the UI
+/// thread: with 50-row pages they cost fractions of a millisecond. If they ever
+/// get heavy (full-text search in phase 2) they move to an isolate.
 class MailCache {
   MailCache._(this._db) {
     _migrate();
   }
 
-  /// Apre (o crea) il database nel file [path].
+  /// Opens (or creates) the database in the file [path].
   factory MailCache.open(String path) => MailCache._(sqlite3.open(path));
 
-  /// Database in memoria, per i test.
+  /// In-memory database, for tests.
   factory MailCache.inMemory() => MailCache._(sqlite3.openInMemory());
 
   final Database _db;
@@ -39,8 +38,8 @@ class MailCache {
     _db.execute('PRAGMA journal_mode = WAL');
     final version = _db.select('PRAGMA user_version').first.columnAt(0) as int;
     if (version >= _schemaVersion) return;
-    // È una cache: invece di migrare i dati si riparte da zero e si
-    // riscarica tutto dal server. Molto più semplice e senza rischi.
+    // It's a cache: instead of migrating data we start over and download
+    // everything again from the server. Much simpler and risk free.
     _db.execute('''
       DROP TABLE IF EXISTS messages;
       DROP TABLE IF EXISTS folders;
@@ -87,8 +86,8 @@ class MailCache {
     ''');
   }
 
-  /// Sostituisce l'elenco delle cartelle, tenendo lo `UIDVALIDITY` di quelle
-  /// che esistono ancora.
+  /// Replaces the folder list, keeping the `UIDVALIDITY` of the folders that
+  /// still exist.
   void saveFolders(String accountId, List<Folder> folders) {
     _transaction(() {
       final keep = folders.map((f) => f.path).toSet();
@@ -111,7 +110,7 @@ class MailCache {
     });
   }
 
-  /// Le cartelle salvate, già ordinate.
+  /// The saved folders, already sorted.
   List<Folder> loadFolders(String accountId) {
     final rows = _db.select(
       'SELECT path, name, role FROM folders WHERE account_id = ?',
@@ -150,9 +149,9 @@ class MailCache {
       ]);
   }
 
-  /// Confronta lo `UIDVALIDITY` del server con quello salvato. Se è
-  /// cambiato, gli UID in cache indicano altri messaggi (o nessuno): la
-  /// cache della cartella si svuota. Restituisce `true` se l'ha svuotata.
+  /// Compares the server's `UIDVALIDITY` with the saved one. If it changed, the
+  /// cached UIDs point to other messages (or none): the folder cache is
+  /// cleared. Returns `true` if it was cleared.
   bool checkUidValidity(String accountId, String path, int uidValidity) {
     final rows = _db.select(
       'SELECT uid_validity FROM folders WHERE account_id = ? AND path = ?',
@@ -181,7 +180,7 @@ class MailCache {
     return stored != null;
   }
 
-  /// Salva o aggiorna delle righe.
+  /// Saves or updates rows.
   void upsertSummaries(
     String accountId,
     String path,
@@ -218,17 +217,16 @@ class MailCache {
     });
   }
 
-  /// Le righe più recenti per data di arrivo (dall'indice; se manca, la
-  /// data della mail). A parità vince l'UID più alto.
+  /// The newest rows by arrival date (from the index; if missing, the mail's
+  /// date). On a tie the higher UID wins.
   List<MessageSummary> loadSummaries(
     String accountId,
     String path, {
     int limit = 200,
   }) => [for (final (m, _) in loadSorted(accountId, path, limit: limit)) m];
 
-  /// Come [loadSummaries], con la data usata per ordinare (millisecondi):
-  /// serve all'Inbox unificata per mescolare più account nello stesso
-  /// ordine.
+  /// Like [loadSummaries], with the date used for sorting (milliseconds): the
+  /// unified Inbox uses it to merge several accounts in the same order.
   List<(MessageSummary, int)> loadSorted(
     String accountId,
     String path, {
@@ -246,7 +244,7 @@ class MailCache {
     return [for (final r in rows) (_rowToSummary(r), r['sort_ms'] as int)];
   }
 
-  /// Le righe salvate per questi UID (quelle che ci sono).
+  /// The saved rows for these UIDs (the ones that exist).
   List<MessageSummary> summariesFor(
     String accountId,
     String path,
@@ -289,7 +287,7 @@ class MailCache {
     );
   }
 
-  /// Tutti gli UID in cache per la cartella, crescenti.
+  /// All cached UIDs for the folder, ascending.
   List<int> cachedUids(String accountId, String path) => [
     for (final r in _db.select(
       'SELECT uid FROM messages WHERE account_id = ? AND path = ? ORDER BY uid',
@@ -298,7 +296,7 @@ class MailCache {
       r['uid'] as int,
   ];
 
-  /// Gli UID che hanno già la data di arrivo nell'indice.
+  /// The UIDs that already have an arrival date in the index.
   Set<int> datedUids(String accountId, String path) => {
     for (final r in _db.select(
       'SELECT uid FROM arrival_dates WHERE account_id = ? AND path = ?',
@@ -307,7 +305,7 @@ class MailCache {
       r['uid'] as int,
   };
 
-  /// Salva le date di arrivo nell'indice.
+  /// Saves arrival dates in the index.
   void saveArrivalDates(
     String accountId,
     String path,
@@ -328,7 +326,7 @@ class MailCache {
     });
   }
 
-  /// Gli UID dell'indice dal più vecchio al più recente per data di arrivo.
+  /// The UIDs in the index from oldest to newest by arrival date.
   List<int> uidsByArrival(String accountId, String path) => [
     for (final r in _db.select(
       '''SELECT uid FROM arrival_dates WHERE account_id = ? AND path = ?
@@ -338,7 +336,7 @@ class MailCache {
       r['uid'] as int,
   ];
 
-  /// Aggiorna solo i flag.
+  /// Updates only the flags.
   void updateFlags(
     String accountId,
     String path,
@@ -364,8 +362,8 @@ class MailCache {
     });
   }
 
-  /// Toglie dalla cache (righe e indice delle date) i messaggi spariti dal
-  /// server (o spostati).
+  /// Removes from the cache (rows and date index) the messages that disappeared
+  /// from the server (or were moved).
   void removeUids(String accountId, String path, Iterable<int> uids) {
     final list = uids.toList();
     if (list.isEmpty) return;
@@ -386,7 +384,7 @@ class MailCache {
     });
   }
 
-  /// Cancella tutto quello che riguarda un account (quando lo rimuovi).
+  /// Deletes everything about an account (when you remove it).
   void deleteAccount(String accountId) {
     _transaction(() {
       _db
@@ -407,6 +405,6 @@ class MailCache {
     }
   }
 
-  /// Chiude il database.
+  /// Closes the database.
   void close() => _db.close();
 }

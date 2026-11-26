@@ -8,9 +8,9 @@ import '../../state/unified_inbox.dart';
 import '../widgets/common.dart';
 import '../widgets/mail_icons.dart';
 
-/// La lista dei messaggi della cartella aperta, con ricerca e "Carica altri".
+/// The message list of the open folder, with search and "Load more".
 class MessageList extends StatefulWidget {
-  /// Crea la lista.
+  /// Creates the list.
   const MessageList({
     super.key,
     required this.controller,
@@ -18,13 +18,13 @@ class MessageList extends StatefulWidget {
     this.leading,
   });
 
-  /// Lo stato della casella.
+  /// The mailbox state.
   final MailboxController controller;
 
-  /// Un messaggio è stato scelto.
+  /// A message was chosen.
   final ValueChanged<MessageSummary> onOpen;
 
-  /// Widget prima del titolo (su mobile: il bottone delle cartelle).
+  /// Widget before the title (on mobile: the folders button).
   final Widget? leading;
 
   @override
@@ -169,9 +169,9 @@ class _MessageListState extends State<MessageList> {
   }
 }
 
-/// Una riga della lista: mittente, data, oggetto, anteprima.
+/// A list row: sender, date, subject, preview.
 class MessageRow extends StatelessWidget {
-  /// Crea la riga.
+  /// Creates the row.
   const MessageRow({
     super.key,
     required this.message,
@@ -180,16 +180,16 @@ class MessageRow extends StatelessWidget {
     this.account,
   });
 
-  /// Il messaggio.
+  /// The message.
   final MessageSummary message;
 
-  /// Nell'Inbox unificata: l'account del messaggio.
+  /// In the unified Inbox: the message's account.
   final String? account;
 
-  /// È quello aperto.
+  /// It is the open one.
   final bool selected;
 
-  /// Apre il messaggio.
+  /// Opens the message.
   final VoidCallback onPressed;
 
   @override
@@ -233,8 +233,8 @@ class MessageRow extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Il pallino dei non letti: un colore più un peso del
-                  // testo diverso, così non dipende solo dal colore.
+                  // The unread dot: a colour plus a different text weight, so
+                  // it doesn't rely on colour alone.
                   SizedBox(
                     width: 16,
                     height: 20,
@@ -341,10 +341,10 @@ class MessageRow extends StatelessWidget {
   }
 }
 
-/// Le Inbox di tutti gli account in una lista. Niente ricerca né "Carica
-/// altri" per ora: si cerca dentro l'account.
+/// Every account's Inbox in one list. No search or "Load more" for now: search
+/// inside the account.
 class UnifiedMessageList extends StatelessWidget {
-  /// Crea la lista.
+  /// Creates the list.
   const UnifiedMessageList({
     super.key,
     required this.inbox,
@@ -352,13 +352,13 @@ class UnifiedMessageList extends StatelessWidget {
     this.leading,
   });
 
-  /// L'Inbox unificata.
+  /// The unified Inbox.
   final UnifiedInbox inbox;
 
-  /// Un messaggio è stato scelto.
+  /// A message was chosen.
   final ValueChanged<UnifiedItem> onOpen;
 
-  /// Widget prima del titolo (su mobile: il bottone delle cartelle).
+  /// Widget before the title (on mobile: the folders button).
   final Widget? leading;
 
   @override

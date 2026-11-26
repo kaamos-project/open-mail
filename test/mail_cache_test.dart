@@ -13,7 +13,7 @@ void main() {
   setUp(() => cache = MailCache.inMemory());
   tearDown(() => cache.close());
 
-  test('salva e rilegge i messaggi, i più recenti prima', () {
+  test('saves and reads back messages, newest first', () {
     cache.upsertSummaries('a', 'INBOX', [summary(1), summary(3), summary(2)]);
     final list = cache.loadSummaries('a', 'INBOX');
     expect(list.map((m) => m.uid), [3, 2, 1]);
@@ -22,7 +22,7 @@ void main() {
     expect(list.first.to.single.email, 'alessio@esempio.org');
   });
 
-  test('limit prende solo gli ultimi N', () {
+  test('limit takes only the latest N', () {
     cache.upsertSummaries('a', 'INBOX', [
       for (var i = 1; i <= 10; i++) summary(i),
     ]);
@@ -33,7 +33,7 @@ void main() {
     ]);
   });
 
-  test('UIDVALIDITY diversa svuota la cartella', () {
+  test('a different UIDVALIDITY clears the folder', () {
     expect(cache.checkUidValidity('a', 'INBOX', 7), isFalse);
     cache.upsertSummaries('a', 'INBOX', [summary(1)]);
     expect(cache.checkUidValidity('a', 'INBOX', 7), isFalse);
@@ -42,7 +42,7 @@ void main() {
     expect(cache.cachedUids('a', 'INBOX'), isEmpty);
   });
 
-  test('aggiorna i flag e toglie gli UID spariti', () {
+  test('updates flags and removes vanished UIDs', () {
     cache.upsertSummaries('a', 'INBOX', [summary(1), summary(2)]);
     cache.updateFlags('a', 'INBOX', {
       1: (seen: true, flagged: true, answered: false),
@@ -54,7 +54,7 @@ void main() {
     expect(list.single.flagged, isTrue);
   });
 
-  test('le cartelle tornano in ordine e gli account sono separati', () {
+  test('folders come back sorted and accounts are separate', () {
     cache.saveFolders('a', const [
       Folder(path: 'Trash', name: 'Trash', role: FolderRole.trash),
       Folder(path: 'INBOX', name: 'INBOX', role: FolderRole.inbox),
@@ -66,10 +66,10 @@ void main() {
     expect(cache.loadSummaries('b', 'INBOX'), isEmpty);
   });
 
-  test('ordina per data, non per UID', () {
+  test('sorts by date, not by UID', () {
     final old = summary(1);
     final moved = MessageSummary(
-      uid: 99, // UID alto: è appena entrato nella cartella
+      uid: 99, // high UID: it just entered the folder
       from: old.from,
       to: old.to,
       subject: 'vecchio',
@@ -84,7 +84,7 @@ void main() {
     expect(cache.loadSummaries('a', 'Archive').map((m) => m.uid), [5, 3, 99]);
   });
 
-  test('indice delle date: ordine, e pulizia insieme ai messaggi', () {
+  test('date index: order, and cleanup together with messages', () {
     cache.saveArrivalDates('a', 'INBOX', {
       1: DateTime.utc(2026, 3),
       2: DateTime.utc(2026, 1),
@@ -98,7 +98,7 @@ void main() {
     expect(cache.datedUids('a', 'INBOX'), isEmpty);
   });
 
-  test('una cache della versione 1 si ricrea da zero', () async {
+  test('a version 1 cache is recreated from scratch', () async {
     final dir = await Directory.systemTemp.createTemp('kaamos_cache');
     addTearDown(() => dir.delete(recursive: true));
     final path = '${dir.path}/mail.db';

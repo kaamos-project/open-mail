@@ -3,40 +3,39 @@ import 'package:flutter/foundation.dart';
 import '../core/models.dart';
 import 'mailbox_controller.dart';
 
-/// Una riga dell'Inbox unificata: il messaggio e l'account da cui viene.
+/// A row of the unified Inbox: the message and the account it comes from.
 class UnifiedItem {
-  /// Crea la riga.
+  /// Creates the row.
   const UnifiedItem({
     required this.controller,
     required this.summary,
     required this.sortMs,
   });
 
-  /// Il controller dell'account: le azioni passano da lui.
+  /// The account's controller: actions go through it.
   final MailboxController controller;
 
-  /// Il messaggio.
+  /// The message.
   final MessageSummary summary;
 
-  /// La data usata per ordinare (arrivo sul server), in millisecondi.
+  /// The date used for sorting (arrival on the server), in milliseconds.
   final int sortMs;
 
-  /// L'account.
+  /// The account.
   Account get account => controller.account;
 
-  /// La cartella del messaggio (la Inbox del suo account).
+  /// The message's folder (its account's Inbox).
   String get path => controller.inbox.path;
 }
 
-/// Le Inbox di tutti gli account in una lista sola, la più recente prima.
+/// Every account's Inbox in a single list, newest first.
 ///
-/// Non ha una copia sua dei messaggi: legge le Inbox dalla cache e si
-/// rilegge ogni volta che un account cambia (sincronizzazione, stella,
-/// archivia…). Ogni azione la fa il controller dell'account del
-/// messaggio, sulla sua Inbox, anche se quell'account sta guardando
-/// un'altra cartella.
+/// It has no copy of its own of the messages: it reads the Inboxes from the
+/// cache and re-reads them every time an account changes (sync, star,
+/// archive…). Each action is done by the controller of the message's account,
+/// on its Inbox, even if that account is showing another folder.
 class UnifiedInbox extends ChangeNotifier {
-  /// Crea la vista su [controllers].
+  /// Creates the view over [controllers].
   UnifiedInbox({
     required List<MailboxController> controllers,
     this.pageSize = 50,
@@ -44,27 +43,27 @@ class UnifiedInbox extends ChangeNotifier {
     setControllers(controllers);
   }
 
-  /// Quanti messaggi mostrare in tutto.
+  /// How many messages to show in total.
   final int pageSize;
 
   List<MailboxController> _controllers = const [];
 
-  /// I messaggi, il più recente prima.
+  /// The messages, newest first.
   List<UnifiedItem> items = const [];
 
-  /// Il controller del messaggio aperto da questa vista.
+  /// The controller of the message opened from this view.
   MailboxController? openController;
 
   bool _disposed = false;
 
-  /// Gli account mostrati.
+  /// The accounts shown.
   List<MailboxController> get controllers => _controllers;
 
-  /// Almeno una Inbox si sta aggiornando.
+  /// At least one Inbox is refreshing.
   bool get syncing => _controllers.any((c) => c.inboxSyncing);
 
-  /// Il primo errore tra gli account, con l'indirizzo davanti (così si
-  /// capisce quale account non risponde).
+  /// The first error among the accounts, prefixed with the address (so you can
+  /// tell which account isn't answering).
   String? get error {
     for (final c in _controllers) {
       final e = c.error;
@@ -73,7 +72,7 @@ class UnifiedInbox extends ChangeNotifier {
     return null;
   }
 
-  /// Il messaggio aperto, se l'ha aperto questa vista.
+  /// The open message, if this view opened it.
   ({String accountId, int uid})? get open {
     final c = openController;
     final uid = c?.openUid;
@@ -81,7 +80,7 @@ class UnifiedInbox extends ChangeNotifier {
     return (accountId: c.account.id, uid: uid);
   }
 
-  /// Cambia gli account (aggiunto o rimosso).
+  /// Changes the accounts (added or removed).
   void setControllers(List<MailboxController> controllers) {
     for (final c in _controllers) {
       c.removeListener(_reload);
@@ -96,10 +95,10 @@ class UnifiedInbox extends ChangeNotifier {
     _reload();
   }
 
-  /// Rilegge le Inbox dalla cache e le mescola per data.
+  /// Re-reads the Inboxes from the cache and merges them by date.
   ///
-  /// Ogni account contribuisce al massimo [pageSize] messaggi: i primi
-  /// [pageSize] della lista unita stanno per forza tra questi.
+  /// Each account contributes at most [pageSize] messages: the first [pageSize]
+  /// of the merged list must be among them.
   void _reload() {
     if (_disposed) return;
     final all = <UnifiedItem>[
@@ -122,11 +121,11 @@ class UnifiedInbox extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Aggiorna le Inbox di tutti gli account, in parallelo.
+  /// Refreshes every account's Inbox, in parallel.
   Future<void> refresh() =>
       Future.wait([for (final c in _controllers) c.syncInbox()]);
 
-  /// Apre [item] nel controller del suo account.
+  /// Opens [item] in its account's controller.
   Future<void> openItem(UnifiedItem item) {
     final previous = openController;
     if (previous != null && previous != item.controller) {
@@ -137,14 +136,14 @@ class UnifiedInbox extends ChangeNotifier {
     return item.controller.open(item.summary.uid, path: item.path);
   }
 
-  /// Chiude il messaggio aperto da questa vista.
+  /// Closes the message opened from this view.
   void closeMessage() {
     openController?.closeMessage();
     openController = null;
     notifyListeners();
   }
 
-  /// Nasconde gli errori di tutti gli account.
+  /// Hides the errors of every account.
   void dismissError() {
     for (final c in _controllers) {
       c.dismissError();

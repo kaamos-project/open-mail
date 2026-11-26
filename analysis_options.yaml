@@ -13,12 +13,12 @@ analyzer:
 
 linter:
   rules:
-    # Performance: const evita di ricostruire oggetti identici a ogni build.
+    # Performance: const avoids rebuilding identical objects on every build.
     - prefer_const_constructors
     - prefer_const_constructors_in_immutables
     - prefer_const_declarations
     - prefer_const_literals_to_create_immutables
-    # API pubblica documentata.
+    # Documented public API.
     - public_member_api_docs
     - always_declare_return_types
     - prefer_final_locals

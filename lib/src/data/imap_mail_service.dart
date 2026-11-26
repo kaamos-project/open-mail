@@ -8,9 +8,9 @@ import '../core/mail_service.dart';
 import '../core/models.dart';
 import '../core/text_utils.dart';
 
-/// [MailServiceFactory] reale: IMAP e SMTP con `enough_mail`.
+/// The real [MailServiceFactory]: IMAP and SMTP with `enough_mail`.
 class ImapMailServiceFactory implements MailServiceFactory {
-  /// Crea la factory.
+  /// Creates the factory.
   const ImapMailServiceFactory();
 
   @override
@@ -46,7 +46,7 @@ class ImapMailServiceFactory implements MailServiceFactory {
   }
 }
 
-/// Traduce gli errori di rete e di protocollo in frasi per l'utente.
+/// Turns network and protocol errors into sentences for the user.
 String describeMailError(Object error) {
   final text = error.toString().toLowerCase();
   if (text.contains('authentication') ||
@@ -69,20 +69,19 @@ String describeMailError(Object error) {
   return 'Errore del server: $error';
 }
 
-/// Un account collegato via IMAP (lettura) e SMTP (invio).
+/// An account connected via IMAP (reading) and SMTP (sending).
 ///
-/// Usa il client IMAP "di basso livello" di enough_mail e non il suo
-/// `MailClient` completo: per la cache ci servono UID e `UIDVALIDITY` sotto
-/// il nostro controllo.
+/// Uses enough_mail's "low level" IMAP client and not its full `MailClient`:
+/// the cache needs UIDs and `UIDVALIDITY` under our control.
 ///
-/// IMAP ha uno stato (la cartella selezionata): due comandi che si
-/// intrecciano potrebbero leggere la cartella sbagliata. Per questo ogni
-/// operazione passa da [_serial], che le mette in fila una alla volta.
+/// IMAP is stateful (the selected folder): two interleaved commands could read
+/// the wrong folder. That's why every operation goes through [_serial], which
+/// queues them one at a time.
 class ImapMailService implements MailService {
-  /// Crea il servizio; la connessione si apre al primo uso.
+  /// Creates the service; the connection opens on first use.
   ImapMailService(this.account, this._password);
 
-  /// L'account collegato.
+  /// The connected account.
   final Account account;
   final String _password;
 
@@ -92,10 +91,10 @@ class ImapMailService implements MailService {
 
   static const _timeout = Duration(seconds: 30);
 
-  /// Esegue [task] dopo che le operazioni precedenti sono finite.
+  /// Runs [task] after the previous operations have finished.
   Future<T> _serial<T>(Future<T> Function() task) {
     final result = _queue.then((_) => task());
-    // La coda prosegue anche se task fallisce.
+    // The queue moves on even if task fails.
     _queue = result.then<void>((_) {}, onError: (_) {});
     return result;
   }
@@ -125,7 +124,7 @@ class ImapMailService implements MailService {
     return client;
   }
 
-  /// Seleziona [path] se non è già la cartella selezionata.
+  /// Selects [path] unless it is already the selected folder.
   Future<(em.ImapClient, em.Mailbox?)> _select(String path) async {
     final client = await _ensureImap();
     if (_selectedPath == path) return (client, null);
@@ -134,8 +133,8 @@ class ImapMailService implements MailService {
     return (client, box);
   }
 
-  /// Ripete una volta l'operazione se la connessione è caduta (succede
-  /// spesso su mobile quando l'app torna in primo piano).
+  /// Retries the operation once if the connection dropped (common on mobile
+  /// when the app comes back to the foreground).
   Future<T> _withRetry<T>(Future<T> Function() task) => _serial(() async {
     try {
       return await task();
@@ -180,8 +179,8 @@ class ImapMailService implements MailService {
   @override
   Future<FolderStatus> openFolder(String path) => _withRetry(() async {
     final client = await _ensureImap();
-    // SELECT sempre: è la risposta di SELECT che porta UIDNEXT e gli
-    // altri contatori aggiornati.
+    // Always SELECT: the SELECT response carries UIDNEXT and the other
+    // up-to-date counters.
     final box = await client.selectMailboxByPath(path);
     _selectedPath = path;
     return FolderStatus(
@@ -234,14 +233,14 @@ class ImapMailService implements MailService {
     });
   }
 
-  /// Scarica i primi byte della parte di testo di ogni messaggio, per
-  /// l'anteprima nella lista. Due giri invece di uno, ma molto più leggero
-  /// che scaricare tutti i messaggi.
+  /// Downloads the first bytes of each message's text part, for the list
+  /// preview. Two round trips instead of one, but much lighter than downloading
+  /// whole messages.
   Future<Map<int, String>> _fetchPreviews(
     em.ImapClient client,
     List<em.MimeMessage> messages,
   ) async {
-    // Raggruppa per fetchId ("1", "1.1"...): un comando per gruppo.
+    // Group by fetchId ("1", "1.1"...): one command per group.
     final groups = <String, List<em.MimeMessage>>{};
     final parts = <int, em.BodyPart>{};
     for (final m in messages) {
@@ -337,7 +336,7 @@ class ImapMailService implements MailService {
   Future<List<int>> search(String path, String query) => _withRetry(() async {
     final (client, _) = await _select(path);
     final q = imapQuote(query);
-    // OR annidati: FROM o SUBJECT o TEXT.
+    // Nested ORs: FROM or SUBJECT or TEXT.
     final result = await client.uidSearchMessages(
       searchCriteria: 'OR OR FROM $q SUBJECT $q TEXT $q',
     );
@@ -350,8 +349,8 @@ class ImapMailService implements MailService {
   Future<MessageContent> fetchMessage(String path, int uid) =>
       _withRetry(() async {
         final (client, _) = await _select(path);
-        // BODY.PEEK: leggere il messaggio non deve segnarlo come letto da
-        // solo; lo facciamo noi con setSeen, così l'utente può annullare.
+        // BODY.PEEK: reading the message must not mark it as read by itself; we
+        // do that with setSeen, so the user can undo it.
         final result = await client.uidFetchMessage(
           uid,
           '(UID FLAGS ENVELOPE BODY.PEEK[])',
@@ -420,8 +419,8 @@ class ImapMailService implements MailService {
   Future<Uint8List> fetchAttachment(String path, int uid, String fetchId) =>
       _withRetry(() async {
         final (client, _) = await _select(path);
-        // La BODYSTRUCTURE dice come è codificata la parte (di solito
-        // base64); BODY.PEEK[id] porta i byte ancora codificati.
+        // BODYSTRUCTURE says how the part is encoded (usually base64);
+        // BODY.PEEK[id] returns the still-encoded bytes.
         final result = await client.uidFetchMessage(
           uid,
           '(BODYSTRUCTURE BODY.PEEK[$fetchId])',
@@ -476,7 +475,7 @@ class ImapMailService implements MailService {
       if (client.serverInfo.supports('MOVE')) {
         await client.uidMove(sequence, targetMailboxPath: targetPath);
       } else {
-        // Server vecchi senza MOVE (RFC 6851): copia, segna, cancella.
+        // Old servers without MOVE (RFC 6851): copy, flag, expunge.
         await client.uidCopy(sequence, targetMailboxPath: targetPath);
         await client.uidMarkDeleted(sequence);
         await client.uidExpunge(sequence);
@@ -543,8 +542,8 @@ class ImapMailService implements MailService {
           ..from = [em.MailAddress(message.from.name, message.from.email)]
           ..to = [for (final a in message.to) em.MailAddress(a.name, a.email)]
           ..cc = [for (final a in message.cc) em.MailAddress(a.name, a.email)]
-          // Ccn NON va negli header: chi riceve vedrebbe tutti i destinatari
-          // nascosti. Va solo nella busta SMTP (vedi send).
+          // Bcc must NOT go in the headers: recipients would see every hidden
+          // recipient. It goes only in the SMTP envelope (see send).
           ..subject = message.subject;
     if (message.inReplyTo != null) {
       builder.setHeader('In-Reply-To', message.inReplyTo);
@@ -591,16 +590,16 @@ class ImapMailService implements MailService {
     try {
       await client.logout();
     } on Object {
-      // Chiudiamo comunque.
+      // Close anyway.
     }
     await client.disconnect();
   }
 }
 
-/// Decodifica i primi byte di una parte di testo, troncati a metà.
+/// Decodes the first bytes of a text part, cut off midway.
 ///
-/// Il troncamento può spezzare una sequenza base64 o quoted-printable:
-/// tagliamo quello che resta a metà prima di decodificare.
+/// The cut can split a base64 or quoted-printable sequence: we trim the
+/// half-sequence left over before decoding.
 String decodePartialText(
   String raw, {
   String? transferEncoding,
@@ -612,7 +611,7 @@ String decodePartialText(
     final clean = text.replaceAll(RegExp(r'\s'), '');
     text = clean.substring(0, clean.length - clean.length % 4);
   } else if (encoding == 'quoted-printable') {
-    // Un "=" o "=X" a fine stringa sono un escape troncato.
+    // A "=" or "=X" at the end of the string is a truncated escape.
     text = text.replaceFirst(RegExp(r'=[0-9A-Fa-f]?$'), '');
   }
   try {
@@ -637,9 +636,9 @@ const _imapMonths = {
   'dec': 12,
 };
 
-/// Legge una data IMAP `INTERNALDATE`, es. `" 6-Nov-2026 21:04:13 +0100"`
-/// (RFC 3501: il giorno può avere uno spazio davanti). Restituisce l'ora UTC
-/// o `null` se il formato non torna.
+/// Parses an IMAP `INTERNALDATE`, e.g. `" 6-Nov-2026 21:04:13 +0100"` (RFC
+/// 3501: the day may have a leading space). Returns the UTC time, or `null` if
+/// the format doesn't match.
 DateTime? parseInternalDate(String? value) {
   if (value == null) return null;
   final m = RegExp(
@@ -660,6 +659,6 @@ DateTime? parseInternalDate(String? value) {
     hours: int.parse(m.group(8)!),
     minutes: int.parse(m.group(9)!),
   );
-  // "+0100" vuol dire un'ora avanti rispetto a UTC: per avere UTC si toglie.
+  // "+0100" means one hour ahead of UTC: subtract it to get UTC.
   return m.group(7) == '+' ? local.subtract(offset) : local.add(offset);
 }

@@ -23,7 +23,7 @@ void main() {
 
   setUp(() async {
     cache = MailCache.inMemory();
-    // Personale: UID 1-3 (minuti 1-3). Lavoro: UID 3-5 (minuti 3-5).
+    // Personal: UIDs 1-3 (minutes 1-3). Work: UIDs 3-5 (minutes 3-5).
     personal = FakeMailService()..seed('INBOX', 3);
     work = FakeMailService()..seed('INBOX', 5);
     work.folders['INBOX']!.messages
@@ -50,11 +50,11 @@ void main() {
     cache.close();
   });
 
-  test('mescola le Inbox per data di arrivo', () {
+  test('merges the Inboxes by arrival date', () {
     expect(order(), [
       'acc2:5',
       'acc2:4',
-      // Stessa data: prima l'account con l'id più piccolo.
+      // Same date: the account with the smaller id comes first.
       'acc1:3',
       'acc2:3',
       'acc1:2',
@@ -63,7 +63,7 @@ void main() {
   });
 
   test(
-    'le azioni vanno nella Inbox anche se l\'account guarda altro',
+    'actions go to the Inbox even if the account shows another folder',
     () async {
       final sent = a.folderWithRole(FolderRole.sent)!;
       await a.selectFolder(sent);
@@ -79,37 +79,37 @@ void main() {
       expect(
         unified.items.firstWhere((i) => i.summary.uid == 3).summary.flagged,
         isTrue,
-        reason: 'la vista si rilegge dalla cache',
+        reason: 'the view re-reads from the cache',
       );
 
       await a.delete([3], path: a.openPath);
       expect(personal.folders['INBOX']!.messages.containsKey(3), isFalse);
       expect(personal.folders['Trash']!.messages, hasLength(1));
       expect(order(), isNot(contains('acc1:3')));
-      expect(a.openUid, isNull, reason: 'il messaggio aperto è sparito');
-      expect(a.current.path, sent.path, reason: 'la cartella aperta resta');
+      expect(a.openUid, isNull, reason: 'the open message is gone');
+      expect(a.current.path, sent.path, reason: 'the open folder stays');
     },
   );
 
-  test('se il server rifiuta, il messaggio torna nella vista', () async {
+  test('if the server refuses, the message comes back in the view', () async {
     personal.failWith = StateError('giù');
     await a.archive([2], path: 'INBOX');
     expect(order(), contains('acc1:2'));
     expect(unified.error, startsWith(testAccount.email));
   });
 
-  test('aggiorna le Inbox senza cambiare cartella', () async {
+  test('refreshes the Inboxes without changing folder', () async {
     final sent = a.folderWithRole(FolderRole.sent)!;
     await a.selectFolder(sent);
     personal.folders['INBOX']!.messages[9] = summary(9);
     await unified.refresh();
     expect(order().first, 'acc1:9');
     expect(a.current.path, sent.path);
-    expect(a.messages, isEmpty, reason: 'la lista resta quella di Inviati');
+    expect(a.messages, isEmpty, reason: 'the list stays the Sent one');
   });
 
   test(
-    'aprire un messaggio di un altro account chiude il precedente',
+    'opening a message of another account closes the previous one',
     () async {
       await unified.openItem(
         unified.items.firstWhere((i) => i.controller == a),
@@ -140,18 +140,18 @@ void main() {
 
     tearDown(() => session.dispose());
 
-    test('entra ed esce dalla vista unificata', () async {
+    test('enters and leaves the unified view', () async {
       expect(session.canUnify, isTrue);
       session.showUnified();
       expect(session.unified?.controllers, hasLength(2));
       session.select(testAccount.id);
-      expect(session.unified, isNull, reason: 'scegliere un account esce');
+      expect(session.unified, isNull, reason: 'choosing an account leaves');
       session.showUnified();
       session.leaveUnified();
       expect(session.unified, isNull);
     });
 
-    test('con un account solo la vista unificata si chiude', () async {
+    test('with a single account the unified view closes', () async {
       session.showUnified();
       await session.remove(secondAccount.id);
       expect(session.canUnify, isFalse);

@@ -7,7 +7,7 @@ import '../../state/mailbox_controller.dart';
 import '../widgets/common.dart';
 import '../widgets/mail_icons.dart';
 
-/// L'icona di una cartella in base al ruolo.
+/// A folder's icon based on its role.
 MailIcon folderIcon(FolderRole role) => switch (role) {
   FolderRole.inbox => MailIcon.inbox,
   FolderRole.sent => MailIcon.send,
@@ -18,11 +18,12 @@ MailIcon folderIcon(FolderRole role) => switch (role) {
   FolderRole.other => MailIcon.folder,
 };
 
-/// La colonna delle cartelle: bottone "Scrivi", cartelle, account in fondo.
+/// The folder column: "Scrivi" (compose) button, folders, account at the
+/// bottom.
 ///
-/// Su desktop è la prima colonna; su mobile è una pagina a sé.
+/// On desktop it is the first column; on mobile it is a page of its own.
 class FolderList extends StatelessWidget {
-  /// Crea la colonna.
+  /// Creates the column.
   const FolderList({
     super.key,
     required this.controller,
@@ -33,22 +34,22 @@ class FolderList extends StatelessWidget {
     this.unified = false,
   });
 
-  /// "Tutte le caselle". `null` con un account solo.
+  /// "Tutte le caselle" (all inboxes). `null` with a single account.
   final VoidCallback? onUnified;
 
-  /// L'Inbox unificata è quella mostrata.
+  /// The unified Inbox is the one shown.
   final bool unified;
 
-  /// Lo stato della casella.
+  /// The mailbox state.
   final MailboxController controller;
 
-  /// "Scrivi".
+  /// "Scrivi" (compose).
   final VoidCallback onCompose;
 
-  /// Chiamato dopo aver scelto una cartella (su mobile chiude la pagina).
+  /// Called after choosing a folder (on mobile it closes the page).
   final ValueChanged<Folder> onSelected;
 
-  /// Apre le impostazioni dell'account.
+  /// Opens the account settings.
   final VoidCallback onAccount;
 
   @override

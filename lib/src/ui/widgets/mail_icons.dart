@@ -2,70 +2,70 @@ import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
 
-/// Le icone di Kaamos Mail che la libreria UI non ha ancora.
+/// Kaamos Mail icons the UI library doesn't have yet.
 ///
-/// Stesso stile di `KaamosIcon` (linee con estremi arrotondati, disegnate
-/// con CustomPaint, colore da [IconTheme]). Quando la libreria avrà il font
-/// di icone, queste si spostano lì.
+/// Same style as `KaamosIcon` (lines with rounded caps, drawn with CustomPaint,
+/// colour from [IconTheme]). When the library gets its icon font, these move
+/// there.
 enum MailIcon {
-  /// Posta in arrivo.
+  /// Inbox.
   inbox,
 
-  /// Stella (contorno).
+  /// Star (outline).
   star,
 
-  /// Stella piena.
+  /// Filled star.
   starFilled,
 
-  /// Inviati.
+  /// Sent.
   send,
 
-  /// Bozza / file.
+  /// Draft / file.
   file,
 
-  /// Archivio.
+  /// Archive.
   archive,
 
-  /// Cestino.
+  /// Trash.
   trash,
 
-  /// Cartella.
+  /// Folder.
   folder,
 
   /// Spam.
   junk,
 
-  /// Aggiorna.
+  /// Refresh.
   refresh,
 
-  /// Rispondi.
+  /// Reply.
   reply,
 
-  /// Inoltra.
+  /// Forward.
   forward,
 
-  /// Graffetta.
+  /// Paperclip.
   paperclip,
 
-  /// Matita: scrivi.
+  /// Pencil: compose.
   edit,
 
-  /// Indietro.
+  /// Back.
   back,
 
-  /// Scudo: privacy.
+  /// Shield: privacy.
   shield,
 
-  /// Busta: non letto.
+  /// Envelope: unread.
   mail,
 
-  /// Lucchetto.
+  /// Padlock.
   lock,
 }
 
-/// Disegna una [MailIcon].
+/// Draws a [MailIcon].
 class MailIconView extends StatelessWidget {
-  /// Crea l'icona.
+  /// Creates the icon.
   const MailIconView(
     this.icon, {
     super.key,
@@ -74,16 +74,16 @@ class MailIconView extends StatelessWidget {
     this.semanticLabel,
   });
 
-  /// Quale icona.
+  /// Which icon.
   final MailIcon icon;
 
-  /// Lato in pixel (default dall'IconTheme, poi 16).
+  /// Side in pixels (defaults to the IconTheme, then 16).
   final double? size;
 
-  /// Colore (default dall'IconTheme).
+  /// Colour (defaults to the IconTheme).
   final Color? color;
 
-  /// Etichetta per gli screen reader; senza, l'icona è decorativa.
+  /// Label for screen readers; without one the icon is decorative.
   final String? semanticLabel;
 
   @override
@@ -110,7 +110,7 @@ class _MailIconPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Griglia 24×24 come le SVG del mockup, scalata alla misura richiesta.
+    // 24×24 grid like the mockup's SVGs, scaled to the requested size.
     final s = size.width / 24;
     canvas.scale(s);
     final stroke = Paint()

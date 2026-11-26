@@ -13,8 +13,8 @@ import '../core/models.dart';
 import '../core/text_utils.dart';
 import 'environment.dart';
 
-/// La WebView esiste solo su queste piattaforme (`flutter_inappwebview`
-/// non supporta Linux: vedi la decisione nel documento dell'MVP).
+/// The WebView exists only on these platforms (`flutter_inappwebview` doesn't
+/// support Linux: see the decision in the MVP document).
 bool get webViewSupported =>
     !kIsWeb &&
     (Platform.isWindows ||
@@ -22,7 +22,7 @@ bool get webViewSupported =>
         Platform.isIOS ||
         Platform.isAndroid);
 
-/// Il costruttore del corpo HTML per l'app vera.
+/// The HTML body builder for the real app.
 Widget platformHtmlBody(
   BuildContext context,
   String document,
@@ -32,32 +32,32 @@ Widget platformHtmlBody(
   return SafeHtmlWebView(document: document, onOpenLink: onOpenLink);
 }
 
-/// Una WebView chiusa a chiave per mostrare mail HTML.
+/// A locked-down WebView for showing HTML mail.
 ///
-/// Le tre protezioni decise con Alessio:
-/// 1. JavaScript spento ([InAppWebViewSettings.javaScriptEnabled]);
-/// 2. HTML già ripulito da `HtmlSanitizer`;
-/// 3. niente rete: la CSP nella pagina blocca le risorse remote, e in più su
-///    Android `blockNetworkLoads` e su tutte le piattaforme ogni navigazione
-///    viene annullata e il link aperto nel browser di sistema.
+/// The three protections agreed with Alessio:
+/// 1. JavaScript off ([InAppWebViewSettings.javaScriptEnabled]);
+/// 2. HTML already cleaned by `HtmlSanitizer`;
+/// 3. no network: the CSP in the page blocks remote resources, plus
+///    `blockNetworkLoads` on Android, and on every platform each navigation is
+///    cancelled and the link opened in the system browser.
 class SafeHtmlWebView extends StatelessWidget {
-  /// Crea la WebView.
+  /// Creates the WebView.
   const SafeHtmlWebView({
     super.key,
     required this.document,
     required this.onOpenLink,
   });
 
-  /// Pagina già ripulita.
+  /// Already cleaned page.
   final String document;
 
-  /// Chiamato quando l'utente tocca un link.
+  /// Called when the user taps a link.
   final ValueChanged<Uri> onOpenLink;
 
   @override
   Widget build(BuildContext context) {
-    // La chiave sul documento: se cambia (es. "Carica immagini") si ricrea
-    // la WebView invece di riusare quella con la pagina vecchia.
+    // Keyed on the document: if it changes (e.g. "Load images") the WebView is
+    // recreated instead of reusing the one with the old page.
     return InAppWebView(
       key: ValueKey(document.hashCode),
       initialData: InAppWebViewInitialData(data: document),
@@ -77,7 +77,7 @@ class SafeHtmlWebView extends StatelessWidget {
       shouldOverrideUrlLoading: (controller, action) async {
         final url = action.request.url;
         final scheme = url?.scheme ?? '';
-        // Il caricamento iniziale della pagina (about:blank / data:) passa.
+        // The initial page load (about:blank / data:) goes through.
         if (url == null || scheme == 'about' || scheme == 'data') {
           return NavigationActionPolicy.ALLOW;
         }
@@ -90,13 +90,13 @@ class SafeHtmlWebView extends StatelessWidget {
   }
 }
 
-/// Al posto della WebView dove non c'è (Linux, fino alla fase 2): il testo
-/// ricavato dall'HTML, con una riga che spiega perché manca la grafica.
+/// In place of the WebView where there is none (Linux, until phase 2): the text
+/// extracted from the HTML, with a line explaining why the layout is missing.
 class UnsupportedHtmlBody extends StatelessWidget {
-  /// Crea il segnaposto per [document] (già ripulito).
+  /// Creates the placeholder for [document] (already cleaned).
   const UnsupportedHtmlBody({super.key, required this.document});
 
-  /// La pagina ripulita.
+  /// The cleaned page.
   final String document;
 
   @override
@@ -123,9 +123,9 @@ class UnsupportedHtmlBody extends StatelessWidget {
   }
 }
 
-/// [FileActions] con i plugin di sistema.
+/// [FileActions] backed by the system plugins.
 class PlatformFileActions implements FileActions {
-  /// Crea le azioni.
+  /// Creates the actions.
   const PlatformFileActions();
 
   @override
@@ -160,7 +160,7 @@ class PlatformFileActions implements FileActions {
   }
 }
 
-/// Tipo MIME dall'estensione, per gli allegati in uscita.
+/// MIME type from the extension, for outgoing attachments.
 String guessMimeType(String fileName) {
   final ext = fileName.contains('.')
       ? fileName.split('.').last.toLowerCase()

@@ -1,6 +1,6 @@
-// La libreria non esporta ancora i controlli di selezione e il menu
-// contestuale: li importiamo da src finché non arriva un KaamosTextArea
-// ufficiale (da proporre in open-ui-flutter).
+// The library doesn't export the selection controls and context menu yet: we
+// import them from src until an official KaamosTextArea arrives (to be proposed
+// in open-ui-flutter).
 // ignore_for_file: implementation_imports
 
 import 'package:flutter/foundation.dart';
@@ -10,13 +10,13 @@ import 'package:kaamos_project_ui/kaamos_project_ui.dart';
 import 'package:kaamos_project_ui/src/components/text_field/context_menu.dart';
 import 'package:kaamos_project_ui/src/components/text_field/selection_controls.dart';
 
-/// Un campo di testo senza cornice, a una o più righe.
+/// A borderless text field, single or multi-line.
 ///
-/// È una copia ridotta di `KaamosEditable` della libreria, con due
-/// differenze: [maxLines] (il corpo della mail va a capo) e nessuna cornice
-/// (le righe A/Da/Oggetto hanno solo la linea sotto, come nel mockup).
+/// It is a trimmed-down copy of the library's `KaamosEditable`, with two
+/// differences: [maxLines] (the mail body wraps) and no border (the
+/// To/From/Subject rows only have the line below, as in the mockup).
 class MailTextArea extends StatefulWidget {
-  /// Crea il campo.
+  /// Creates the field.
   const MailTextArea({
     super.key,
     required this.controller,
@@ -32,37 +32,37 @@ class MailTextArea extends StatefulWidget {
     this.style,
   });
 
-  /// Il testo.
+  /// The text.
   final TextEditingController controller;
 
-  /// Il focus, se serve controllarlo da fuori.
+  /// The focus, if it needs to be controlled from outside.
   final FocusNode? focusNode;
 
-  /// Testo grigio quando il campo è vuoto.
+  /// Grey text when the field is empty.
   final String? placeholder;
 
-  /// Nome per gli screen reader.
+  /// Name for screen readers.
   final String? semanticLabel;
 
-  /// `null` = quante righe servono.
+  /// `null` = as many lines as needed.
   final int? maxLines;
 
-  /// Tipo di tastiera.
+  /// Keyboard type.
   final TextInputType? keyboardType;
 
-  /// Tasto azione della tastiera.
+  /// Keyboard action key.
   final TextInputAction? textInputAction;
 
-  /// Invio premuto.
+  /// Enter pressed.
   final ValueChanged<String>? onSubmitted;
 
-  /// Testo cambiato.
+  /// Text changed.
   final ValueChanged<String>? onChanged;
 
-  /// Prende il focus appena compare.
+  /// Takes focus as soon as it appears.
   final bool autofocus;
 
-  /// Stile del testo.
+  /// Text style.
   final TextStyle? style;
 
   @override
@@ -178,13 +178,13 @@ class _MailTextAreaState extends State<MailTextArea>
   }
 }
 
-/// Rende selezionabile (e copiabile) il testo dentro [child], senza
-/// Material: una `SelectableRegion` con i controlli di selezione Kaamos.
+/// Makes the text inside [child] selectable (and copyable), without Material: a
+/// `SelectableRegion` with the Kaamos selection controls.
 class MailSelectable extends StatefulWidget {
-  /// Avvolge [child].
+  /// Wraps [child].
   const MailSelectable({super.key, required this.child});
 
-  /// Il contenuto con il testo.
+  /// The content with the text.
   final Widget child;
 
   @override

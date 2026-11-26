@@ -10,15 +10,15 @@ import '../../core/text_utils.dart';
 import '../environment.dart';
 import '../widgets/mail_icons.dart';
 
-/// "Aggiungi un account": IMAP e SMTP manuali, verifica, salvataggio.
+/// "Add an account": manual IMAP and SMTP, check, save.
 class AccountSetupScreen extends StatefulWidget {
-  /// Crea la schermata. [onSaved] riceve l'account appena salvato.
+  /// Creates the screen. [onSaved] receives the freshly saved account.
   const AccountSetupScreen({super.key, required this.onSaved, this.onCancel});
 
-  /// Account verificato e salvato.
+  /// Account checked and saved.
   final ValueChanged<Account> onSaved;
 
-  /// `null` al primo avvio (non c'è niente a cui tornare).
+  /// `null` on first start (there is nothing to go back to).
   final VoidCallback? onCancel;
 
   @override
@@ -46,7 +46,8 @@ class _AccountSetupScreenState extends State<AccountSetupScreen> {
   @override
   void initState() {
     super.initState();
-    // Suggerisce i server dall'indirizzo: tu@esempio.it → imap.esempio.it.
+    // Suggests the servers from the address: you@example.com →
+    // imap.example.com.
     _email.addListener(_suggestServers);
   }
 
@@ -98,7 +99,7 @@ class _AccountSetupScreenState extends State<AccountSetupScreen> {
     } else {
       _formError = null;
       return Account(
-        // Basta che sia unico su questo dispositivo.
+        // It only needs to be unique on this device.
         id:
             '${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}'
             '${math.Random.secure().nextInt(1 << 30).toRadixString(36)}',
@@ -129,8 +130,8 @@ class _AccountSetupScreenState extends State<AccountSetupScreen> {
       return;
     }
     final env = MailEnvironment.of(context);
-    // Lo stesso indirizzo sullo stesso server due volte creerebbe due
-    // caselle identiche che si pestano i piedi.
+    // The same address on the same server twice would create two identical
+    // mailboxes stepping on each other.
     final existing = await env.accounts.load();
     if (!mounted) return;
     if (existing.any(

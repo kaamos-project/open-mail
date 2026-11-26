@@ -2,102 +2,101 @@ import 'dart:typed_data';
 
 import 'models.dart';
 
-/// Tutto quello che l'app chiede a un server di posta.
+/// Everything the app asks of a mail server.
 ///
-/// La UI e la sincronizzazione parlano solo con questa interfaccia: non
-/// sanno se sotto c'è IMAP o, un domani, JMAP. Nei test la si sostituisce con
-/// un server finto in memoria.
+/// The UI and the sync talk only to this interface: they don't know whether
+/// IMAP or, one day, JMAP sits underneath. Tests replace it with a fake
+/// in-memory server.
 abstract interface class MailService {
-  /// Elenca le cartelle selezionabili.
+  /// Lists the selectable folders.
   Future<List<Folder>> listFolders();
 
-  /// Apre (SELECT) una cartella e ne restituisce lo stato.
+  /// Opens (SELECT) a folder and returns its status.
   Future<FolderStatus> openFolder(String path);
 
-  /// Gli UID di tutti i messaggi della cartella, crescenti.
+  /// The UIDs of all messages in the folder, ascending.
   Future<List<int>> listUids(String path);
 
-  /// La data in cui il server ha ricevuto ciascun messaggio (`INTERNALDATE`).
-  /// Non cambia quando il messaggio viene spostato: serve a ordinare per
-  /// data su qualsiasi server, anche senza l'estensione SORT (es. Gmail).
+  /// The date the server received each message (`INTERNALDATE`). It does not
+  /// change when the message is moved: it lets us sort by date on any server,
+  /// even without the SORT extension (e.g. Gmail).
   Future<Map<int, DateTime>> fetchArrivalDates(String path, List<int> uids);
 
-  /// I riassunti dei messaggi con questi [uids].
+  /// The summaries of the messages with these [uids].
   Future<List<MessageSummary>> fetchSummaries(String path, List<int> uids);
 
-  /// Solo i flag (letto, stella, risposto) dei messaggi con questi [uids]:
-  /// costa poco e serve a tenere aggiornata la cache.
+  /// Only the flags (read, starred, answered) of the messages with these
+  /// [uids]: cheap, and keeps the cache up to date.
   Future<Map<int, MessageFlagsState>> fetchFlags(String path, List<int> uids);
 
-  /// Cerca sul server (IMAP SEARCH) in mittente, oggetto e testo.
+  /// Searches on the server (IMAP SEARCH) in sender, subject and text.
   Future<List<int>> search(String path, String query);
 
-  /// Scarica tutto il messaggio.
+  /// Downloads the whole message.
   Future<MessageContent> fetchMessage(String path, int uid);
 
-  /// Scarica un allegato.
+  /// Downloads an attachment.
   Future<Uint8List> fetchAttachment(String path, int uid, String fetchId);
 
-  /// Segna come letti o non letti.
+  /// Marks as read or unread.
   Future<void> setSeen(String path, List<int> uids, {required bool seen});
 
-  /// Mette o toglie la stella.
+  /// Adds or removes the star.
   Future<void> setFlagged(String path, List<int> uids, {required bool flagged});
 
-  /// Segna come risposto.
+  /// Marks as answered.
   Future<void> setAnswered(String path, List<int> uids);
 
-  /// Sposta in un'altra cartella.
+  /// Moves to another folder.
   Future<void> move(String path, List<int> uids, String targetPath);
 
-  /// Cancella davvero (flag \Deleted + EXPUNGE). Si usa solo nel Cestino.
+  /// Deletes for good (\Deleted flag + EXPUNGE). Only used in the Trash.
   Future<void> deletePermanently(String path, List<int> uids);
 
-  /// Aggiunge un messaggio già pronto (RFC 822) a una cartella, es. una copia
-  /// in Inviati o una bozza.
+  /// Adds a ready-made message (RFC 822) to a folder, e.g. a copy in Sent or a
+  /// draft.
   Future<void> append(String path, String rawMessage, {List<String> flags});
 
-  /// Invia via SMTP e restituisce il messaggio come testo RFC 822, da
-  /// salvare in Inviati.
+  /// Sends via SMTP and returns the message as RFC 822 text, to save in Sent.
   Future<String> send(OutgoingMessage message);
 
-  /// Crea il testo RFC 822 senza inviarlo (per le bozze).
+  /// Builds the RFC 822 text without sending it (for drafts).
   String render(OutgoingMessage message);
 
-  /// Chiude le connessioni.
+  /// Closes the connections.
   Future<void> close();
 }
 
-/// I flag di un messaggio, senza il resto.
+/// The flags of a message, without the rest.
 typedef MessageFlagsState = ({bool seen, bool flagged, bool answered});
 
-/// Esito della prova di connessione nella schermata "Aggiungi account".
+/// Result of the connection test on the "Add account" screen.
 class ConnectionCheckResult {
-  /// Crea l'esito.
+  /// Creates the result.
   const ConnectionCheckResult({
     this.imapError,
     this.smtpError,
     this.folderCount = 0,
   });
 
-  /// Errore IMAP leggibile, `null` se va tutto bene.
+  /// Readable IMAP error, `null` if everything is fine.
   final String? imapError;
 
-  /// Errore SMTP leggibile, `null` se va tutto bene.
+  /// Readable SMTP error, `null` if everything is fine.
   final String? smtpError;
 
-  /// Quante cartelle ha trovato IMAP.
+  /// How many folders IMAP found.
   final int folderCount;
 
-  /// Entrambi i server rispondono e accettano le credenziali.
+  /// Both servers respond and accept the credentials.
   bool get ok => imapError == null && smtpError == null;
 }
 
-/// Crea i [MailService] e prova le connessioni. Nei test si sostituisce.
+/// Creates the [MailService]s and tests connections. Replaced in tests.
 abstract interface class MailServiceFactory {
-  /// Collega un account già configurato.
+  /// Connects an account that is already configured.
   Future<MailService> connect(Account account, String password);
 
-  /// Prova IMAP e SMTP prima di salvare un account.
+  /// Tests IMAP and SMTP before saving an account.
   Future<ConnectionCheckResult> check(Account account, String password);
 }

@@ -7,7 +7,7 @@ import 'package:kaamos_mail/src/data/account_repository.dart';
 import 'package:kaamos_mail/src/data/secret_store.dart';
 import 'package:kaamos_mail/src/ui/environment.dart';
 
-/// Un account d'esempio.
+/// A sample account.
 const testAccount = Account(
   id: 'acc1',
   displayName: 'Alessio Test',
@@ -25,7 +25,7 @@ const testAccount = Account(
   ),
 );
 
-/// Un messaggio d'esempio con UID [uid].
+/// A sample message with UID [uid].
 MessageSummary summary(
   int uid, {
   String subject = 'Oggetto',
@@ -44,27 +44,27 @@ MessageSummary summary(
   hasAttachments: false,
 );
 
-/// Una cartella del server finto.
+/// A folder of the fake server.
 class FakeFolder {
-  /// Crea la cartella.
+  /// Creates the folder.
   FakeFolder(this.folder, {this.uidValidity = 1});
 
-  /// La cartella.
+  /// The folder.
   final Folder folder;
 
   /// UIDVALIDITY.
   int uidValidity;
 
-  /// Messaggi per UID.
+  /// Messages by UID.
   final Map<int, MessageSummary> messages = {};
 
-  /// Testo dei messaggi per UID.
+  /// Message text by UID.
   final Map<int, String> bodies = {};
 }
 
-/// Un server IMAP/SMTP in memoria.
+/// An in-memory IMAP/SMTP server.
 class FakeMailService implements MailService {
-  /// Crea il server con Inbox, Inviati, Bozze, Archivio e Cestino.
+  /// Creates the server with Inbox, Sent, Drafts, Archive and Trash.
   FakeMailService() {
     for (final f in const [
       Folder(path: 'INBOX', name: 'INBOX', role: FolderRole.inbox),
@@ -77,25 +77,25 @@ class FakeMailService implements MailService {
     }
   }
 
-  /// Le cartelle per percorso.
+  /// Folders by path.
   final Map<String, FakeFolder> folders = {};
 
-  /// Messaggi inviati.
+  /// Sent messages.
   final List<OutgoingMessage> sent = [];
 
-  /// Messaggi aggiunti con APPEND: (cartella, flag).
+  /// Messages added with APPEND: (folder, flags).
   final List<(String, List<String>)> appended = [];
 
-  /// Quanti UID sono stati chiesti con [fetchSummaries].
+  /// How many UIDs were requested with [fetchSummaries].
   int fetchedSummaries = 0;
 
-  /// Se non null, ogni chiamata fallisce con questo errore.
+  /// If not null, every call fails with this error.
   Object? failWith;
 
-  /// Chiamato da [close].
+  /// Set by [close].
   bool closed = false;
 
-  /// Aggiunge [count] messaggi in [path] con UID 1..count.
+  /// Adds [count] messages to [path] with UIDs 1..count.
   void seed(String path, int count) {
     for (var uid = 1; uid <= count; uid++) {
       folders[path]!.messages[uid] = summary(uid);
@@ -132,7 +132,7 @@ class FakeMailService implements MailService {
     return folders[path]!.messages.keys.toList()..sort();
   }
 
-  /// Quante date di arrivo sono state chieste.
+  /// How many arrival dates were requested.
   int fetchedDates = 0;
 
   @override
@@ -262,7 +262,7 @@ class FakeMailService implements MailService {
     for (final u in uids) {
       final m = from.messages.remove(u);
       if (m == null) continue;
-      // Nella cartella di arrivo il messaggio ha un UID nuovo.
+      // In the target folder the message gets a new UID.
       to.messages[next] = MessageSummary(
         uid: next,
         from: m.from,
@@ -311,15 +311,15 @@ class FakeMailService implements MailService {
   Future<void> close() async => closed = true;
 }
 
-/// Crea sempre lo stesso [FakeMailService].
+/// Always creates the same [FakeMailService].
 class FakeMailServiceFactory implements MailServiceFactory {
-  /// Crea la fabbrica.
+  /// Creates the factory.
   FakeMailServiceFactory(this.service);
 
-  /// Il server finto.
+  /// The fake server.
   final FakeMailService service;
 
-  /// Risultato di [check].
+  /// Result of [check].
   ConnectionCheckResult checkResult = const ConnectionCheckResult(
     folderCount: 5,
   );
@@ -333,9 +333,9 @@ class FakeMailServiceFactory implements MailServiceFactory {
       checkResult;
 }
 
-/// File finti: niente plugin.
+/// Fake files: no plugins.
 class FakeFileActions implements FileActions {
-  /// Link aperti.
+  /// Opened links.
   final List<Uri> opened = [];
 
   @override
@@ -348,10 +348,10 @@ class FakeFileActions implements FileActions {
   Future<List<OutgoingAttachment>> pickAttachments() async => const [];
 }
 
-/// Account in memoria: nei widget test l'I/O vero su file non finisce mai
-/// (il tempo è finto), quindi sostituiamo il repository.
+/// In-memory accounts: in widget tests real file I/O never completes (time is
+/// fake), so we replace the repository.
 class MemoryAccountRepository implements AccountRepository {
-  /// Crea il repository con [initial] già salvati.
+  /// Creates the repository with [initial] already saved.
   MemoryAccountRepository(this.secrets, [List<Account> initial = const []])
     : _accounts = [...initial];
 

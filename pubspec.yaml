@@ -1,5 +1,5 @@
 name: kaamos_mail
-description: "Kaamos Mail: client email FOSS, solo client, privacy prima di tutto."
+description: "Kaamos Mail: a FOSS, client-only, privacy-first email client."
 publish_to: none
 version: 0.1.0+1
 repository: https://github.com/kaamos-project/open-mail
@@ -11,8 +11,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  # Libreria UI Kaamos: dipendenza git. La repo non ha ancora tag, quindi
-  # fissiamo il commit di main: quando ci sarà v0.1.0 si passa al tag.
+  # Kaamos UI library: git dependency. The repo has no tags yet, so we pin
+  # a main commit: once v0.1.0 exists we switch to the tag.
   kaamos_project_ui:
     git:
       url: https://github.com/kaamos-project/open-ui-flutter
