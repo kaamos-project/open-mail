@@ -79,4 +79,30 @@ void main() {
     expect(doc, isNot(contains('expression(')));
     expect(doc, contains('color: red'));
   });
+
+  test('tiene sfondo e colori del body originale', () {
+    final doc = clean(
+      '<html><body bgcolor="#1a1a1a" text="#ffffff" '
+      'style="background-color: #222; margin: 0" onload="x()">'
+      '<p>bianco su scuro</p></body></html>',
+    );
+    expect(doc, contains('bgcolor="#1a1a1a"'));
+    expect(doc, contains('text="#ffffff"'));
+    expect(doc, contains('background-color: #222'));
+    expect(doc, isNot(contains('onload')));
+  });
+
+  test('lo sfondo remoto del body resta bloccato', () {
+    final r = sanitizer.sanitize(
+      '<body background="https://track.er/bg.png" '
+      'style="background: url(https://track.er/x.png)">x</body>',
+    );
+    expect(r.document, isNot(contains('track.er')));
+    expect(r.blockedRemote, 2);
+  });
+
+  test('negli attributi del body non si esce dalle virgolette', () {
+    final doc = clean('<body text="red&quot; onload=&quot;x()">x</body>');
+    expect(doc, isNot(contains('onload')));
+  });
 }

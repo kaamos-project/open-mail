@@ -244,6 +244,14 @@ class HtmlSanitizer {
     for (final style in document.querySelectorAll('head style').toList()) {
       body.nodes.insert(0, style..remove());
     }
+    // Gli attributi del <body> originale (sfondo, colore del testo):
+    // tante newsletter mettono lo sfondo scuro lì e il testo bianco nel
+    // contenuto. Se li perdiamo, il testo resta bianco su bianco.
+    final bodyAttributes = _bodyAttributes(
+      document.body,
+      fixImageUrl,
+      cleanCss,
+    );
     clean(body);
 
     final csp = [
@@ -264,15 +272,49 @@ class HtmlSanitizer {
 <meta name="referrer" content="no-referrer">
 <style>
 html { background: #ffffff; color: #111111; }
-body { margin: 0; padding: 16px; font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 15px; line-height: 1.5; overflow-wrap: anywhere; }
+body { margin: 0; padding: 16px; min-height: 100vh; box-sizing: border-box; font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 15px; line-height: 1.5; overflow-wrap: anywhere; }
 img { max-width: 100%; height: auto; }
 table { max-width: 100%; }
 pre { white-space: pre-wrap; }
 </style>
 </head>
-<body>${body.innerHtml}</body>
+<body$bodyAttributes>${body.innerHtml}</body>
 </html>''';
     return SanitizedHtml(document: page, blockedRemote: blocked);
+  }
+
+  /// Attributi che hanno senso solo sul `<body>` (HTML vecchio, ma ancora
+  /// molto usato nelle mail).
+  static const _bodyOnlyAttributes = {'text', 'link', 'vlink', 'alink'};
+
+  /// Gli attributi ripuliti del `<body>` originale, già pronti da scrivere
+  /// nel tag (es. ` bgcolor="#1a1a1a" style="color: #fff"`).
+  static String _bodyAttributes(
+    dom.Element? original,
+    String? Function(String) fixImageUrl,
+    String Function(String) cleanCss,
+  ) {
+    if (original == null) return '';
+    final copy = dom.Element.tag('body');
+    final legacy = <String, String>{};
+    for (final MapEntry(:key, :value) in original.attributes.entries) {
+      final name = key.toString().toLowerCase();
+      if (_bodyOnlyAttributes.contains(name)) {
+        legacy[name] = value;
+      } else {
+        copy.attributes[name] = value;
+      }
+    }
+    _cleanAttributes(copy, fixImageUrl, cleanCss);
+    final all = {
+      for (final MapEntry(:key, :value) in copy.attributes.entries)
+        key.toString(): value,
+      // Solo colori: niente che possa contenere un indirizzo.
+      for (final MapEntry(:key, :value) in legacy.entries)
+        if (RegExp(r'^#?[0-9a-zA-Z]{1,20}$').hasMatch(value.trim()))
+          key: value.trim(),
+    };
+    return all.entries.map((e) => ' ${e.key}="${escapeHtml(e.value)}"').join();
   }
 
   static void _cleanAttributes(
