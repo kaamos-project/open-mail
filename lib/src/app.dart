@@ -152,6 +152,9 @@ class _RootState extends State<_Root> {
             onSelectAccount: session.select,
             onAddAccount: () => setState(() => _addingAccount = true),
             onRemoveAccount: () => session.remove(controller.account.id),
+            unified: session.unified,
+            onShowUnified: session.canUnify ? session.showUnified : null,
+            onLeaveUnified: session.leaveUnified,
           );
         },
       ),

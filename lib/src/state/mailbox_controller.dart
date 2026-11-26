@@ -67,6 +67,11 @@ class MailboxController extends ChangeNotifier {
   /// UID del messaggio aperto.
   int? openUid;
 
+  /// Cartella del messaggio aperto. Di solito è [current], ma dall'Inbox
+  /// unificata si apre un messaggio della Inbox anche se l'account sta
+  /// guardando un'altra cartella.
+  String? openPath;
+
   /// Contenuto del messaggio aperto, `null` mentre si scarica.
   MessageContent? openMessage;
 
@@ -185,12 +190,21 @@ class MailboxController extends ChangeNotifier {
     // Ordine per data (non per UID: una mail vecchia appena spostata ha
     // l'UID più alto della cartella).
     final serverUids = cache.uidsByArrival(account.id, path);
-    _serverUids = serverUids;
+    final isCurrent = current.path == path;
     final cached = cache.cachedUids(account.id, path);
 
-    // La finestra visibile: gli ultimi N messaggi per data.
-    _window = math.min(math.max(_window, pageSize), serverUids.length);
-    final window = serverUids.sublist(serverUids.length - _window);
+    // La finestra visibile: gli ultimi N messaggi per data. Per una
+    // cartella sincronizzata in sottofondo (la Inbox per la vista
+    // unificata) basta la prima pagina.
+    final size = math.min(
+      isCurrent ? math.max(_window, pageSize) : pageSize,
+      serverUids.length,
+    );
+    if (isCurrent) {
+      _serverUids = serverUids;
+      _window = size;
+    }
+    final window = serverUids.sublist(serverUids.length - size);
     final cachedSet = cached.toSet();
     final missing = [
       for (final u in window)
@@ -216,8 +230,36 @@ class MailboxController extends ChangeNotifier {
         await service.fetchFlags(path, known),
       );
     }
-    if (current.path == path && searchQuery == null) {
+    if (isCurrent && searchQuery == null) {
       messages = cache.loadSummaries(account.id, path, limit: _window);
+    }
+  }
+
+  bool _inboxSyncing = false;
+
+  /// La Inbox si sta aggiornando (in sottofondo o perché è aperta).
+  bool get inboxSyncing =>
+      _inboxSyncing || (syncing && current.path == inbox.path);
+
+  /// La Inbox, anche se il server non la dichiara con SPECIAL-USE.
+  Folder get inbox =>
+      folderWithRole(FolderRole.inbox) ??
+      const Folder(path: 'INBOX', name: 'INBOX', role: FolderRole.inbox);
+
+  /// Aggiorna la Inbox senza cambiare la cartella aperta: serve all'Inbox
+  /// unificata, che legge le Inbox di tutti gli account dalla cache.
+  Future<void> syncInbox() async {
+    if (inbox.path == current.path) return refresh();
+    if (_inboxSyncing) return;
+    _inboxSyncing = true;
+    _notify();
+    try {
+      await _syncFolder(await _ensureService(), inbox.path);
+    } on Object catch (e) {
+      error = describeMailError(e);
+    } finally {
+      _inboxSyncing = false;
+      _notify();
     }
   }
 
@@ -271,21 +313,24 @@ class MailboxController extends ChangeNotifier {
     }
   }
 
-  /// Apre un messaggio e lo segna come letto.
-  Future<void> open(int uid) async {
+  /// Apre un messaggio (della cartella aperta, o di [path]) e lo segna
+  /// come letto.
+  Future<void> open(int uid, {String? path}) async {
+    final folder = path ?? current.path;
     openUid = uid;
+    openPath = folder;
     openMessage = null;
     loadingMessage = true;
     error = null;
     _notify();
     try {
       final service = await _ensureService();
-      final content = await service.fetchMessage(current.path, uid);
+      final content = await service.fetchMessage(folder, uid);
       if (openUid != uid) return;
       openMessage = content;
-      final summary = _find(uid);
+      final summary = _summaries(folder, [uid]).firstOrNull;
       if (summary != null && !summary.seen) {
-        await setSeen([uid], seen: true);
+        await setSeen([uid], seen: true, path: folder);
       }
     } on Object catch (e) {
       if (openUid == uid) error = describeMailError(e);
@@ -295,119 +340,189 @@ class MailboxController extends ChangeNotifier {
     }
   }
 
+  /// La riga del messaggio aperto, con stella e letto aggiornati (il
+  /// contenuto scaricato resta com'era al momento dell'apertura).
+  MessageSummary? get openSummary {
+    final uid = openUid;
+    if (uid == null) return null;
+    return _summaries(openPath ?? current.path, [uid]).firstOrNull;
+  }
+
+  /// La cartella del messaggio aperto.
+  Folder get openFolder {
+    final path = openPath;
+    if (path == null || path == current.path) return current;
+    return folders.where((f) => f.path == path).firstOrNull ??
+        Folder(path: path, name: path, role: FolderRole.other);
+  }
+
   /// Chiude il messaggio aperto (su mobile: torna alla lista).
   void closeMessage() {
     openUid = null;
+    openPath = null;
     openMessage = null;
     loadingMessage = false;
     _notify();
   }
 
-  MessageSummary? _find(int uid) =>
-      messages.where((m) => m.uid == uid).firstOrNull;
+  /// Le righe di [uids] in [path]: dalla lista se è la cartella aperta
+  /// (copre anche i risultati di ricerca, che non sono in cache),
+  /// altrimenti dalla cache.
+  List<MessageSummary> _summaries(String path, Iterable<int> uids) {
+    final set = uids.toSet();
+    if (path == current.path) {
+      final inList = [
+        for (final m in messages)
+          if (set.contains(m.uid)) m,
+      ];
+      if (inList.length == set.length) return inList;
+    }
+    return cache.summariesFor(account.id, path, set);
+  }
+
+  /// Rimette [rows] nella lista (se è la cartella aperta) e in cache.
+  void _apply(String path, List<MessageSummary> rows) {
+    final byUid = {for (final m in rows) m.uid: m};
+    if (path == current.path) {
+      messages = [for (final m in messages) byUid[m.uid] ?? m];
+    }
+    final cached = cache
+        .summariesFor(account.id, path, byUid.keys)
+        .map((m) => m.uid);
+    cache.upsertSummaries(account.id, path, [
+      for (final uid in cached) byUid[uid]!,
+    ]);
+  }
 
   /// Aggiorna subito la UI e la cache, poi il server. Se il server
   /// fallisce, torna indietro: l'interfaccia non deve mentire.
   Future<void> _optimistic(
+    String path,
     List<int> uids,
     MessageSummary Function(MessageSummary) change,
     Future<void> Function(MailService) remote,
   ) async {
-    final before = messages;
-    final set = uids.toSet();
-    messages = [for (final m in messages) set.contains(m.uid) ? change(m) : m];
-    cache.upsertSummaries(account.id, current.path, [
-      for (final m in messages)
-        if (set.contains(m.uid)) m,
-    ]);
+    final before = _summaries(path, uids);
+    _apply(path, [for (final m in before) change(m)]);
     _notify();
     try {
       await remote(await _ensureService());
     } on Object catch (e) {
-      messages = before;
-      cache.upsertSummaries(account.id, current.path, [
-        for (final m in before)
-          if (set.contains(m.uid)) m,
-      ]);
+      _apply(path, before);
       error = describeMailError(e);
       _notify();
     }
   }
 
-  /// Letto / non letto.
-  Future<void> setSeen(List<int> uids, {required bool seen}) => _optimistic(
-    uids,
-    (m) => m.copyWith(seen: seen),
-    (s) => s.setSeen(current.path, uids, seen: seen),
-  );
+  /// Letto / non letto. [path]: cartella dei messaggi, di default quella
+  /// aperta.
+  Future<void> setSeen(List<int> uids, {required bool seen, String? path}) {
+    final folder = path ?? current.path;
+    return _optimistic(
+      folder,
+      uids,
+      (m) => m.copyWith(seen: seen),
+      (s) => s.setSeen(folder, uids, seen: seen),
+    );
+  }
 
   /// Stella sì / no.
-  Future<void> setFlagged(List<int> uids, {required bool flagged}) =>
-      _optimistic(
-        uids,
-        (m) => m.copyWith(flagged: flagged),
-        (s) => s.setFlagged(current.path, uids, flagged: flagged),
-      );
+  Future<void> setFlagged(
+    List<int> uids, {
+    required bool flagged,
+    String? path,
+  }) {
+    final folder = path ?? current.path;
+    return _optimistic(
+      folder,
+      uids,
+      (m) => m.copyWith(flagged: flagged),
+      (s) => s.setFlagged(folder, uids, flagged: flagged),
+    );
+  }
 
-  /// Toglie i messaggi dalla lista e dalla cache, poi esegue [remote].
+  /// Toglie i messaggi da lista e cache, poi esegue [remote]. Se il server
+  /// rifiuta, tornano al loro posto.
   Future<void> _removeFromList(
+    String path,
     List<int> uids,
     Future<void> Function(MailService) remote,
   ) async {
-    final before = messages;
     final set = uids.toSet();
-    messages = [
-      for (final m in messages)
-        if (!set.contains(m.uid)) m,
-    ];
-    if (openUid != null && set.contains(openUid)) closeMessage();
+    final isCurrent = path == current.path;
+    final beforeList = messages;
+    final beforeRows = cache.summariesFor(account.id, path, set);
+    if (isCurrent) {
+      messages = [
+        for (final m in messages)
+          if (!set.contains(m.uid)) m,
+      ];
+    }
+    cache.removeUids(account.id, path, set);
+    if (openPath == path && openUid != null && set.contains(openUid)) {
+      closeMessage();
+    }
     _notify();
     try {
       await remote(await _ensureService());
-      cache.removeUids(account.id, current.path, uids);
-      _serverUids = [
-        for (final u in _serverUids)
-          if (!set.contains(u)) u,
-      ];
-      _window = math.min(_window, _serverUids.length);
+      if (isCurrent) {
+        _serverUids = [
+          for (final u in _serverUids)
+            if (!set.contains(u)) u,
+        ];
+        _window = math.min(_window, _serverUids.length);
+      }
     } on Object catch (e) {
-      messages = before;
+      if (isCurrent) messages = beforeList;
+      cache.upsertSummaries(account.id, path, beforeRows);
       error = describeMailError(e);
       _notify();
     }
   }
 
   /// Sposta in una cartella.
-  Future<void> move(List<int> uids, Folder target) =>
-      _removeFromList(uids, (s) => s.move(current.path, uids, target.path));
+  Future<void> move(List<int> uids, Folder target, {String? path}) {
+    final folder = path ?? current.path;
+    return _removeFromList(
+      folder,
+      uids,
+      (s) => s.move(folder, uids, target.path),
+    );
+  }
 
   /// Archivia (se il server ha una cartella Archivio).
-  Future<void> archive(List<int> uids) async {
+  Future<void> archive(List<int> uids, {String? path}) async {
     final target = folderWithRole(FolderRole.archive);
     if (target == null) {
       error = 'Questo account non ha una cartella Archivio.';
       _notify();
       return;
     }
-    await move(uids, target);
+    await move(uids, target, path: path);
   }
 
   /// Elimina: sposta nel Cestino; se sei già nel Cestino (o non c'è),
   /// cancella per sempre.
-  Future<void> delete(List<int> uids) {
+  Future<void> delete(List<int> uids, {String? path}) {
+    final folder = path ?? current.path;
     final trash = folderWithRole(FolderRole.trash);
-    if (trash == null || trash.path == current.path) {
+    if (trash == null || trash.path == folder) {
       return _removeFromList(
+        folder,
         uids,
-        (s) => s.deletePermanently(current.path, uids),
+        (s) => s.deletePermanently(folder, uids),
       );
     }
-    return move(uids, trash);
+    return move(uids, trash, path: folder);
   }
 
   /// Invia un messaggio, ne salva una copia in Inviati e, se è una
   /// risposta, segna l'originale come risposto.
-  Future<void> send(OutgoingMessage message, {int? answeredUid}) async {
+  Future<void> send(
+    OutgoingMessage message, {
+    int? answeredUid,
+    String? answeredPath,
+  }) async {
     final service = await _ensureService();
     final raw = await service.send(message);
     final sent = folderWithRole(FolderRole.sent);
@@ -427,11 +542,13 @@ class MailboxController extends ChangeNotifier {
       }
     }
     if (answeredUid != null) {
+      final folder = answeredPath ?? current.path;
       unawaited(
         _optimistic(
+          folder,
           [answeredUid],
           (m) => m.copyWith(answered: true),
-          (s) => s.setAnswered(current.path, [answeredUid]),
+          (s) => s.setAnswered(folder, [answeredUid]),
         ),
       );
     }
@@ -456,7 +573,11 @@ class MailboxController extends ChangeNotifier {
     final uid = openUid;
     if (uid == null) throw StateError('Nessun messaggio aperto');
     final service = await _ensureService();
-    return service.fetchAttachment(current.path, uid, attachment.fetchId);
+    return service.fetchAttachment(
+      openPath ?? current.path,
+      uid,
+      attachment.fetchId,
+    );
   }
 
   /// Nasconde l'errore mostrato.

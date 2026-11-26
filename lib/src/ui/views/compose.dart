@@ -149,6 +149,7 @@ class _ComposeViewState extends State<ComposeView> {
       await widget.controller.send(
         _message(),
         answeredUid: widget.draft.answeredUid,
+        answeredPath: widget.draft.answeredPath,
       );
       if (mounted) widget.onClose();
     } on Object catch (e) {

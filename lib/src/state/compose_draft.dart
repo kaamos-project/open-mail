@@ -31,9 +31,11 @@ class ComposeDraft {
     this.inReplyTo,
     this.references = const [],
     this.answeredUid,
+    this.answeredPath,
   });
 
-  /// Bozza di risposta a [original] per l'account [me].
+  /// Bozza di risposta a [original] per l'account [me]. [path] è la
+  /// cartella di [original].
   ///
   /// Si risponde a `Reply-To` se c'è, altrimenti al mittente. Con [all] gli
   /// altri destinatari vanno in Cc, senza doppioni e senza noi stessi.
@@ -41,6 +43,7 @@ class ComposeDraft {
     MessageContent original, {
     required Account me,
     bool all = false,
+    String? path,
   }) {
     final s = original.summary;
     final mine = me.email.toLowerCase();
@@ -68,6 +71,7 @@ class ComposeDraft {
       inReplyTo: original.messageId,
       references: refs,
       answeredUid: s.uid,
+      answeredPath: path,
     );
   }
 
@@ -101,4 +105,9 @@ class ComposeDraft {
 
   /// UID del messaggio da segnare come "risposto" dopo l'invio.
   final int? answeredUid;
+
+  /// Cartella di [answeredUid]. `null`: quella aperta. Serve quando si
+  /// risponde dall'Inbox unificata mentre l'account guarda un'altra
+  /// cartella.
+  final String? answeredPath;
 }

@@ -18,6 +18,14 @@ portachiavi del sistema operativo.
 - Bozze salvate sul server, copia in Inviati (tranne Gmail, che la fa da sé).
 - Stella, letto/non letto, Archivia, Cestino.
 
+## Fase 2 (in corso)
+
+- Più account: aggiungi, passa dall'uno all'altro, rimuovi.
+- "Tutte le caselle": le Inbox di tutti gli account in una lista sola,
+  ordinate per data di arrivo. Ogni azione (stella, letto, archivia,
+  rispondi) la fa l'account del messaggio. Per ora niente ricerca né
+  "Carica altri" in questa vista: mostra gli ultimi 50 messaggi.
+
 ## Architettura
 
 ```

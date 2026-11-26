@@ -29,7 +29,15 @@ class FolderList extends StatelessWidget {
     required this.onCompose,
     required this.onSelected,
     required this.onAccount,
+    this.onUnified,
+    this.unified = false,
   });
+
+  /// "Tutte le caselle". `null` con un account solo.
+  final VoidCallback? onUnified;
+
+  /// L'Inbox unificata è quella mostrata.
+  final bool unified;
 
   /// Lo stato della casella.
   final MailboxController controller;
@@ -71,10 +79,21 @@ class FolderList extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 children: [
+                  if (onUnified != null) ...[
+                    _FolderRow(
+                      label: 'Tutte le caselle',
+                      icon: MailIcon.inbox,
+                      selected: unified,
+                      onPressed: onUnified!,
+                    ),
+                    const SizedBox(height: 8),
+                  ],
                   for (final folder in folders)
                     _FolderRow(
-                      folder: folder,
+                      label: folderLabel(folder),
+                      icon: folderIcon(folder.role),
                       selected:
+                          !unified &&
                           folder.path == controller.current.path &&
                           controller.searchQuery == null,
                       onPressed: () {
@@ -139,19 +158,20 @@ class FolderList extends StatelessWidget {
 
 class _FolderRow extends StatelessWidget {
   const _FolderRow({
-    required this.folder,
+    required this.label,
+    required this.icon,
     required this.selected,
     required this.onPressed,
   });
 
-  final Folder folder;
+  final String label;
+  final MailIcon icon;
   final bool selected;
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
     final theme = KaamosTheme.of(context);
-    final label = folderLabel(folder);
     return Semantics(
       selected: selected,
       child: KaamosPressable(
@@ -175,7 +195,7 @@ class _FolderRow extends StatelessWidget {
               child: Row(
                 children: [
                   MailIconView(
-                    folderIcon(folder.role),
+                    icon,
                     size: 18,
                     color: selected ? theme.ink : theme.mute,
                   ),

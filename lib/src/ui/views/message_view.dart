@@ -185,12 +185,14 @@ class _MessageBodyState extends State<_MessageBody> {
     final s = m.summary;
     // La stella cambia nella lista (aggiornamento ottimistico), non nel
     // contenuto già scaricato: la leggiamo da lì.
-    final flagged =
-        c.messages.where((x) => x.uid == s.uid).firstOrNull?.flagged ??
-        s.flagged;
+    final flagged = c.openSummary?.flagged ?? s.flagged;
     final me = c.account;
+    // Il messaggio può venire da una cartella diversa da quella aperta
+    // (Inbox unificata): ogni azione dice da quale.
+    final path = c.openPath;
+    final folder = c.openFolder;
     final archive = c.folderWithRole(FolderRole.archive);
-    final inArchive = c.current.role == FolderRole.archive;
+    final inArchive = folder.role == FolderRole.archive;
 
     final actions = Wrap(
       spacing: 4,
@@ -199,15 +201,17 @@ class _MessageBodyState extends State<_MessageBody> {
         MailIconButton(
           icon: MailIcon.reply,
           label: 'Rispondi',
-          onPressed: () => widget.onCompose(ComposeDraft.reply(m, me: me)),
+          onPressed: () =>
+              widget.onCompose(ComposeDraft.reply(m, me: me, path: path)),
         ),
         if (s.to.length + m.cc.length > 1)
           MailIconButton(
             icon: MailIcon.reply,
             label: 'Rispondi a tutti',
             iconColor: theme.accent,
-            onPressed: () =>
-                widget.onCompose(ComposeDraft.reply(m, me: me, all: true)),
+            onPressed: () => widget.onCompose(
+              ComposeDraft.reply(m, me: me, all: true, path: path),
+            ),
           ),
         MailIconButton(
           icon: MailIcon.forward,
@@ -218,13 +222,13 @@ class _MessageBodyState extends State<_MessageBody> {
           icon: flagged ? MailIcon.starFilled : MailIcon.star,
           label: flagged ? 'Togli la stella' : 'Metti la stella',
           iconColor: flagged ? theme.accent : null,
-          onPressed: () => c.setFlagged([s.uid], flagged: !flagged),
+          onPressed: () => c.setFlagged([s.uid], flagged: !flagged, path: path),
         ),
         MailIconButton(
           icon: MailIcon.mail,
           label: 'Segna come non letto',
           onPressed: () {
-            c.setSeen([s.uid], seen: false);
+            c.setSeen([s.uid], seen: false, path: path);
             c.closeMessage();
             widget.onBack?.call();
           },
@@ -234,17 +238,17 @@ class _MessageBodyState extends State<_MessageBody> {
             icon: MailIcon.archive,
             label: 'Archivia',
             onPressed: () {
-              c.archive([s.uid]);
+              c.archive([s.uid], path: path);
               widget.onBack?.call();
             },
           ),
         MailIconButton(
           icon: MailIcon.trash,
-          label: c.current.role == FolderRole.trash
+          label: folder.role == FolderRole.trash
               ? 'Elimina definitivamente'
               : 'Sposta nel cestino',
           onPressed: () {
-            c.delete([s.uid]);
+            c.delete([s.uid], path: path);
             widget.onBack?.call();
           },
         ),
