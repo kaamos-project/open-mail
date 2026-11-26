@@ -1,0 +1,36 @@
+name: kaamos_mail
+description: "Kaamos Mail: client email FOSS, solo client, privacy prima di tutto."
+publish_to: none
+version: 0.1.0+1
+repository: https://github.com/kaamos-project/open-mail
+
+environment:
+  sdk: ^3.11.5
+  flutter: ">=3.50.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # Libreria UI Kaamos: dipendenza git. La repo non ha ancora tag, quindi
+  # fissiamo il commit di main: quando ci sarà v0.1.0 si passa al tag.
+  kaamos_project_ui:
+    git:
+      url: https://github.com/kaamos-project/open-ui-flutter
+      ref: 581fbeb7e50bbcd9b8ad17082a039f802e914a92
+  enough_mail: ^3.0.0
+  sqlite3: ^3.9.2
+  flutter_secure_storage: ^11.2.0
+  flutter_inappwebview: ^6.1.5
+  file_picker: ^13.4.1
+  open_filex: ^5.0.0
+  path_provider: ^2.1.6
+  html: ^0.15.7
+  url_launcher: ^6.3.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: false
