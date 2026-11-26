@@ -129,6 +129,18 @@ class _AccountSetupScreenState extends State<AccountSetupScreen> {
       return;
     }
     final env = MailEnvironment.of(context);
+    // Lo stesso indirizzo sullo stesso server due volte creerebbe due
+    // caselle identiche che si pestano i piedi.
+    final existing = await env.accounts.load();
+    if (!mounted) return;
+    if (existing.any(
+      (a) =>
+          a.email.toLowerCase() == account.email.toLowerCase() &&
+          a.imap.host.toLowerCase() == account.imap.host.toLowerCase(),
+    )) {
+      setState(() => _formError = 'Questo account c\'è già.');
+      return;
+    }
     setState(() {
       _imapState = _CheckState.running;
       _smtpState = _CheckState.running;

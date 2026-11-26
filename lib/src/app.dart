@@ -2,11 +2,10 @@ import 'package:flutter/widgets.dart';
 import 'package:kaamos_project_ui/kaamos_project_ui.dart';
 
 import 'core/mail_service.dart';
-import 'core/models.dart';
 import 'data/account_repository.dart';
 import 'data/mail_cache.dart';
 import 'data/secret_store.dart';
-import 'state/mailbox_controller.dart';
+import 'state/mail_session.dart';
 import 'ui/environment.dart';
 import 'ui/screens/account_setup.dart';
 import 'ui/screens/keychain_missing.dart';
@@ -63,7 +62,7 @@ class KaamosMailApp extends StatelessWidget {
   }
 }
 
-enum _Phase { checking, keychainMissing, setup, ready }
+enum _Phase { checking, keychainMissing, ready }
 
 /// Avvio: portachiavi → account → casella.
 class _Root extends StatefulWidget {
@@ -75,7 +74,8 @@ class _Root extends StatefulWidget {
 
 class _RootState extends State<_Root> {
   _Phase _phase = _Phase.checking;
-  MailboxController? _controller;
+  MailSession? _session;
+  bool _addingAccount = false;
   bool _started = false;
 
   @override
@@ -89,7 +89,7 @@ class _RootState extends State<_Root> {
 
   @override
   void dispose() {
-    _controller?.dispose();
+    _session?.dispose();
     super.dispose();
   }
 
@@ -102,63 +102,58 @@ class _RootState extends State<_Root> {
       if (mounted) setState(() => _phase = _Phase.keychainMissing);
       return;
     }
-    final accounts = await env.accounts.load();
-    if (!mounted) return;
-    if (accounts.isEmpty) {
-      setState(() => _phase = _Phase.setup);
-    } else {
-      _startMailbox(accounts.first);
+    final session =
+        _session ??
+        MailSession(
+          repository: env.accounts,
+          cache: env.cache,
+          services: env.services,
+        );
+    await session.load();
+    if (!mounted) {
+      session.dispose();
+      return;
     }
-  }
-
-  void _startMailbox(Account account) {
-    final env = MailEnvironment.of(context);
-    _controller?.dispose();
-    final controller = MailboxController(
-      account: account,
-      cache: env.cache,
-      connect: () async {
-        final password = await env.accounts.password(account.id);
-        if (password == null) {
-          throw StateError(
-            'La password non è nel portachiavi: rimuovi e aggiungi di '
-            'nuovo l\'account.',
-          );
-        }
-        return env.services.connect(account, password);
-      },
-    );
     setState(() {
-      _controller = controller;
+      _session = session;
       _phase = _Phase.ready;
     });
-    controller.start();
-  }
-
-  Future<void> _removeAccount() async {
-    final env = MailEnvironment.of(context);
-    final controller = _controller;
-    if (controller == null) return;
-    final id = controller.account.id;
-    setState(() {
-      _controller = null;
-      _phase = _Phase.setup;
-    });
-    controller.dispose();
-    await env.accounts.remove(id);
-    env.cache.deleteAccount(id);
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = KaamosTheme.of(context);
+    final session = _session;
     final Widget child = switch (_phase) {
       _Phase.checking => const SizedBox.shrink(),
       _Phase.keychainMissing => KeychainMissingScreen(onRetry: _boot),
-      _Phase.setup => AccountSetupScreen(onSaved: _startMailbox),
-      _Phase.ready => MailHome(
-        controller: _controller!,
-        onRemoveAccount: _removeAccount,
+      _Phase.ready => ListenableBuilder(
+        listenable: session!,
+        builder: (context, _) {
+          final controller = session.controller;
+          if (controller == null || _addingAccount) {
+            return AccountSetupScreen(
+              onSaved: (account) {
+                session.added(account);
+                setState(() => _addingAccount = false);
+              },
+              // Al primo avvio non c'è niente a cui tornare.
+              onCancel: controller == null
+                  ? null
+                  : () => setState(() => _addingAccount = false),
+            );
+          }
+          return MailHome(
+            // Cambiando account la casella riparte pulita (es. una bozza
+            // aperta su desktop resta dell'account in cui era).
+            key: ValueKey(controller.account.id),
+            controller: controller,
+            accounts: session.accounts,
+            onSelectAccount: session.select,
+            onAddAccount: () => setState(() => _addingAccount = true),
+            onRemoveAccount: () => session.remove(controller.account.id),
+          );
+        },
       ),
     };
     return ColoredBox(color: theme.canvas, child: child);

@@ -4,6 +4,7 @@ import 'package:kaamos_mail/src/app.dart';
 import 'package:kaamos_mail/src/data/mail_cache.dart';
 import 'package:kaamos_mail/src/data/secret_store.dart';
 
+import 'mail_session_test.dart' show secondAccount;
 import 'support/fakes.dart';
 
 void main() {
@@ -120,5 +121,30 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Testo del messaggio 4'), findsNothing);
     expect(find.text('Oggetto 4'), findsOneWidget);
+  });
+
+  testWidgets('più account: cambio account e aggiunta annullabile', (
+    tester,
+  ) async {
+    final accounts = MemoryAccountRepository(secrets);
+    await accounts.save(testAccount, 'p');
+    await accounts.save(secondAccount, 'p');
+    await pumpApp(tester, accounts: accounts);
+
+    expect(find.text(testAccount.email), findsOneWidget);
+    await tester.tap(find.bySemanticsLabel('Account ${testAccount.email}'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsLabel('Lavoro, ${secondAccount.email}'));
+    await tester.pumpAndSettle();
+    expect(find.text(secondAccount.email), findsOneWidget);
+
+    await tester.tap(find.bySemanticsLabel('Account ${secondAccount.email}'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Aggiungi account'));
+    await tester.pumpAndSettle();
+    expect(find.text('Aggiungi un account'), findsOneWidget);
+    await tester.tap(find.text('Annulla'));
+    await tester.pumpAndSettle();
+    expect(find.text(secondAccount.email), findsOneWidget);
   });
 }

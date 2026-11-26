@@ -32,6 +32,9 @@ class MailHome extends StatefulWidget {
     super.key,
     required this.controller,
     required this.onRemoveAccount,
+    this.accounts = const [],
+    this.onSelectAccount,
+    this.onAddAccount,
   });
 
   /// Lo stato della casella.
@@ -39,6 +42,15 @@ class MailHome extends StatefulWidget {
 
   /// "Rimuovi account": cancella account, password e cache.
   final VoidCallback onRemoveAccount;
+
+  /// Tutti gli account, per passare dall'uno all'altro.
+  final List<Account> accounts;
+
+  /// Mostra un altro account.
+  final ValueChanged<String>? onSelectAccount;
+
+  /// Apre l'aggiunta di un account.
+  final VoidCallback? onAddAccount;
 
   @override
   State<MailHome> createState() => _MailHomeState();
@@ -93,24 +105,43 @@ class _MailHomeState extends State<MailHome> {
   }
 
   Future<void> _showAccount(BuildContext context) async {
-    final remove = await showKaamosDialog<bool>(
+    final choice = await showKaamosDialog<String>(
       context: context,
       builder: (context) => KaamosDialog(
-        title: _c.account.displayName,
-        content: Text(
-          '${_c.account.email}\n'
-          'IMAP ${_c.account.imap.host}:${_c.account.imap.port}\n'
-          'SMTP ${_c.account.smtp.host}:${_c.account.smtp.port}\n\n'
-          'Rimuovendo l\'account cancello da questo dispositivo la password '
-          'dal portachiavi e la copia locale delle mail. Sul server non '
-          'cambia niente.',
+        title: 'Account',
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final a in widget.accounts)
+              _AccountRow(
+                account: a,
+                active: a.id == _c.account.id,
+                onPressed: () => Navigator.of(context).pop('select:${a.id}'),
+              ),
+            const SizedBox(height: 12),
+            Text(
+              'Rimuovendo un account cancello da questo dispositivo la '
+              'password dal portachiavi e la copia locale delle mail. Sul '
+              'server non cambia niente.',
+              style: KaamosTypography.captionMd.copyWith(
+                color: KaamosTheme.of(context).mute,
+              ),
+            ),
+          ],
         ),
         actions: [
           KaamosButton(
             variant: KaamosButtonVariant.secondary,
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Rimuovi account'),
+            onPressed: () => Navigator.of(context).pop('remove'),
+            child: Text('Rimuovi ${_c.account.email}'),
           ),
+          if (widget.onAddAccount != null)
+            KaamosButton(
+              variant: KaamosButtonVariant.tertiary,
+              onPressed: () => Navigator.of(context).pop('add'),
+              child: const Text('Aggiungi account'),
+            ),
           KaamosButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Chiudi'),
@@ -118,7 +149,40 @@ class _MailHomeState extends State<MailHome> {
         ],
       ),
     );
-    if (remove ?? false) widget.onRemoveAccount();
+    if (choice == null || !context.mounted) return;
+    if (choice == 'remove') {
+      await _confirmRemove(context);
+    } else if (choice == 'add') {
+      widget.onAddAccount?.call();
+    } else if (choice.startsWith('select:')) {
+      widget.onSelectAccount?.call(choice.substring(7));
+    }
+  }
+
+  /// Rimuovere è irreversibile in locale: si chiede conferma.
+  Future<void> _confirmRemove(BuildContext context) async {
+    final ok = await showKaamosDialog<bool>(
+      context: context,
+      builder: (context) => KaamosDialog(
+        title: 'Rimuovere ${_c.account.email}?',
+        content: const Text(
+          'Password e mail salvate su questo dispositivo vengono cancellate. '
+          'Le mail sul server restano dove sono.',
+        ),
+        actions: [
+          KaamosButton(
+            variant: KaamosButtonVariant.tertiary,
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Annulla'),
+          ),
+          KaamosButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Rimuovi'),
+          ),
+        ],
+      ),
+    );
+    if (ok ?? false) widget.onRemoveAccount();
   }
 
   @override
@@ -250,6 +314,78 @@ class _MailHomeState extends State<MailHome> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Una riga della lista account nel dialog.
+class _AccountRow extends StatelessWidget {
+  const _AccountRow({
+    required this.account,
+    required this.active,
+    required this.onPressed,
+  });
+
+  final Account account;
+  final bool active;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = KaamosTheme.of(context);
+    return Semantics(
+      selected: active,
+      child: KaamosPressable(
+        onPressed: onPressed,
+        semanticLabel: '${account.displayName}, ${account.email}',
+        builder: (context, states) => KaamosFocusRing(
+          visible: states.contains(WidgetState.focused),
+          color: theme.focusRing,
+          borderRadius: KaamosRadius.md,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            decoration: BoxDecoration(
+              color: active || states.contains(WidgetState.hovered)
+                  ? theme.surfaceElevated
+                  : null,
+              borderRadius: const BorderRadius.all(
+                Radius.circular(KaamosRadius.md),
+              ),
+            ),
+            child: Row(
+              children: [
+                MailAvatar(label: account.displayName, size: 32),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        account.displayName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: KaamosTypography.bodySmStrong.copyWith(
+                          color: theme.ink,
+                        ),
+                      ),
+                      Text(
+                        account.email,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: KaamosTypography.captionSm.copyWith(
+                          color: theme.mute,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (active)
+                  KaamosIcon(KaamosIcons.check, size: 14, color: theme.ink),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
