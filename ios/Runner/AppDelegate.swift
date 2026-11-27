@@ -32,7 +32,7 @@ final class AuthSessionPlugin: NSObject, FlutterPlugin,
 
   static func register(with registrar: FlutterPluginRegistrar) {
     let channel = FlutterMethodChannel(
-      name: "dev.kaamos.mail/oauth", binaryMessenger: registrar.messenger())
+      name: "dev.kaamos_project.mail/oauth", binaryMessenger: registrar.messenger())
     registrar.addMethodCallDelegate(AuthSessionPlugin(), channel: channel)
   }
 

@@ -28,10 +28,10 @@ val googleRedirectScheme: String =
         ?.takeIf { it.endsWith(".apps.googleusercontent.com") }
         ?.removeSuffix(".apps.googleusercontent.com")
         ?.let { "com.googleusercontent.apps.$it" }
-        ?: "dev.kaamos.kaamosmail"
+        ?: "dev.kaamos-project.mail"
 
 android {
-    namespace = "dev.kaamos.kaamos_mail"
+    namespace = "dev.kaamos_project.mail"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -42,7 +42,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "dev.kaamos.kaamos_mail"
+        applicationId = "dev.kaamos_project.mail"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

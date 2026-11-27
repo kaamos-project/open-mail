@@ -39,8 +39,8 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <!-- Google: the Android client ID reversed (build.gradle.kts). -->
                 <data android:scheme="${googleRedirectScheme}" />
-                <!-- Microsoft: dev.kaamos.kaamosmail://auth -->
-                <data android:scheme="dev.kaamos.kaamosmail" />
+                <!-- Microsoft: dev.kaamos-project.mail://auth -->
+                <data android:scheme="dev.kaamos-project.mail" />
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
