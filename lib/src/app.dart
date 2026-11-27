@@ -4,6 +4,7 @@ import 'package:kaamos_project_ui/kaamos_project_ui.dart';
 import 'core/mail_service.dart';
 import 'data/account_repository.dart';
 import 'data/mail_cache.dart';
+import 'data/oauth_client.dart';
 import 'data/secret_store.dart';
 import 'state/mail_session.dart';
 import 'ui/environment.dart';
@@ -24,6 +25,7 @@ class KaamosMailApp extends StatelessWidget {
     required this.services,
     required this.files,
     required this.htmlBody,
+    this.oauth,
   });
 
   /// Saved accounts.
@@ -44,6 +46,9 @@ class KaamosMailApp extends StatelessWidget {
   /// HTML body.
   final HtmlBodyBuilder htmlBody;
 
+  /// Google and Microsoft sign-in, where available.
+  final OAuthSignIn? oauth;
+
   @override
   Widget build(BuildContext context) {
     return MailEnvironment(
@@ -53,6 +58,7 @@ class KaamosMailApp extends StatelessWidget {
       services: services,
       files: files,
       htmlBody: htmlBody,
+      oauth: oauth,
       child: const KaamosApp(
         title: 'Kaamos Mail',
         debugShowCheckedModeBanner: false,

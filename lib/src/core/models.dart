@@ -53,11 +53,20 @@ class ServerConfig {
   int get hashCode => Object.hash(host, port, security);
 }
 
-/// An email account configured by hand.
+/// A provider that signs in with OAuth2 instead of a password.
+enum OAuthProvider {
+  /// Gmail and Google Workspace.
+  google,
+
+  /// Outlook.com, Hotmail and Microsoft 365.
+  microsoft,
+}
+
+/// An email account.
 ///
-/// It holds no password: that lives only in the system keychain (see
-/// `SecretStore`). This way the accounts file can be read without exposing
-/// anything secret.
+/// It holds no password or token: those live only in the system keychain
+/// (see `SecretStore`). This way the accounts file can be read without
+/// exposing anything secret.
 @immutable
 class Account {
   /// Creates an account.
@@ -68,6 +77,7 @@ class Account {
     required this.username,
     required this.imap,
     required this.smtp,
+    this.oauth,
   });
 
   /// Reads an account saved with [toJson].
@@ -78,6 +88,11 @@ class Account {
     username: json['username']! as String,
     imap: ServerConfig.fromJson(json['imap']! as Map<String, Object?>),
     smtp: ServerConfig.fromJson(json['smtp']! as Map<String, Object?>),
+    oauth: switch (json['oauth']) {
+      'google' => OAuthProvider.google,
+      'microsoft' => OAuthProvider.microsoft,
+      _ => null,
+    },
   );
 
   /// Local identifier, stable even if the user changes address.
@@ -98,6 +113,10 @@ class Account {
   /// Outgoing mail server.
   final ServerConfig smtp;
 
+  /// The OAuth2 provider, `null` for password accounts. With OAuth2 the
+  /// keychain holds the refresh token instead of the password.
+  final OAuthProvider? oauth;
+
   /// For saving the account to disk.
   Map<String, Object?> toJson() => {
     'id': id,
@@ -106,6 +125,7 @@ class Account {
     'username': username,
     'imap': imap.toJson(),
     'smtp': smtp.toJson(),
+    if (oauth != null) 'oauth': oauth!.name,
   };
 }
 

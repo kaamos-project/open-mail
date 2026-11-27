@@ -25,6 +25,8 @@ portachiavi del sistema operativo.
   ordinate per data di arrivo. Ogni azione (stella, letto, archivia,
   rispondi) la fa l'account del messaggio. Per ora niente ricerca né
   "Carica altri" in questa vista: mostra gli ultimi 50 messaggi.
+- Accesso con Google e Microsoft (OAuth2 + XOAUTH2) su desktop. Come
+  registrare l'app e avviarla con i client ID: [docs/oauth.md](docs/oauth.md).
 
 ## Architettura
 

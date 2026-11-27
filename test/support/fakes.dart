@@ -378,6 +378,10 @@ class MemoryAccountRepository implements AccountRepository {
   Future<String?> password(String accountId) => secrets.read('pwd.$accountId');
 
   @override
+  Future<void> updatePassword(String accountId, String secret) =>
+      secrets.write('pwd.$accountId', secret);
+
+  @override
   Future<void> remove(String accountId) async {
     await secrets.delete('pwd.$accountId');
     _accounts.removeWhere((a) => a.id == accountId);

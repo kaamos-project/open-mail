@@ -6,16 +6,66 @@ import 'package:enough_mail/enough_mail.dart' as em;
 
 import '../core/mail_service.dart';
 import '../core/models.dart';
+import '../core/oauth.dart';
 import '../core/text_utils.dart';
+import 'oauth_client.dart';
 
 /// The real [MailServiceFactory]: IMAP and SMTP with `enough_mail`.
+///
+/// [connect] and [check] get the keychain secret: the password, or for
+/// OAuth2 accounts the refresh token, which becomes a fresh access token
+/// on every login.
 class ImapMailServiceFactory implements MailServiceFactory {
-  /// Creates the factory.
-  const ImapMailServiceFactory();
+  /// Creates the factory. [onRefreshTokenChanged] saves a rotated refresh
+  /// token (Microsoft sends a new one on every refresh).
+  ImapMailServiceFactory({OAuthClient? oauth, this.onRefreshTokenChanged})
+    : oauth = oauth ?? OAuthClient();
+
+  /// Refreshes OAuth2 access tokens.
+  final OAuthClient oauth;
+
+  /// Called with the new refresh token when the provider replaces it.
+  final Future<void> Function(String accountId, String refreshToken)?
+  onRefreshTokenChanged;
+
+  /// What goes in the IMAP/SMTP login for [account].
+  ///
+  /// The access token stays in memory and is reused until it is about to
+  /// expire (about an hour); only the refresh token is ever saved.
+  Future<String> Function() credentialFor(Account account, String secret) {
+    final provider = account.oauth;
+    if (provider == null) return () async => secret;
+    final config = oauthConfig(provider);
+    var refreshToken = secret;
+    OAuthTokens? current;
+    Future<String>? pending;
+    Future<String> fetch() async {
+      final tokens = await oauth.refresh(config, refreshToken);
+      current = tokens;
+      final rotated = tokens.refreshToken;
+      if (rotated != null && rotated != refreshToken) {
+        refreshToken = rotated;
+        await onRefreshTokenChanged?.call(account.id, rotated);
+      }
+      return tokens.accessToken;
+    }
+
+    return () {
+      final tokens = current;
+      if (tokens != null && tokens.isValid(DateTime.now())) {
+        return Future.value(tokens.accessToken);
+      }
+      // IMAP and SMTP may ask at the same time: one refresh for both.
+      return pending ??= fetch().whenComplete(() => pending = null);
+    };
+  }
 
   @override
   Future<MailService> connect(Account account, String password) async {
-    final service = ImapMailService(account, password);
+    final service = ImapMailService(
+      account,
+      credential: credentialFor(account, password),
+    );
     await service._ensureImap();
     return service;
   }
@@ -25,7 +75,10 @@ class ImapMailServiceFactory implements MailServiceFactory {
     String? imapError;
     String? smtpError;
     var folders = 0;
-    final service = ImapMailService(account, password);
+    final service = ImapMailService(
+      account,
+      credential: credentialFor(account, password),
+    );
     try {
       folders = (await service.listFolders()).length;
     } on Object catch (e) {
@@ -48,6 +101,7 @@ class ImapMailServiceFactory implements MailServiceFactory {
 
 /// Turns network and protocol errors into sentences for the user.
 String describeMailError(Object error) {
+  if (error is OAuthException) return error.message;
   final text = error.toString().toLowerCase();
   if (text.contains('authentication') ||
       text.contains('login') ||
@@ -78,12 +132,14 @@ String describeMailError(Object error) {
 /// the wrong folder. That's why every operation goes through [_serial], which
 /// queues them one at a time.
 class ImapMailService implements MailService {
-  /// Creates the service; the connection opens on first use.
-  ImapMailService(this.account, this._password);
+  /// Creates the service; the connection opens on first use. [credential]
+  /// gives the password, or a valid access token for OAuth2 accounts.
+  ImapMailService(this.account, {required Future<String> Function() credential})
+    : _credential = credential;
 
   /// The connected account.
   final Account account;
-  final String _password;
+  final Future<String> Function() _credential;
 
   em.ImapClient? _imap;
   String? _selectedPath;
@@ -118,7 +174,14 @@ class ImapMailService implements MailService {
     if (imap.security == ConnectionSecurity.startTls) {
       await client.startTls();
     }
-    await client.login(account.username, _password);
+    if (account.oauth != null) {
+      await client.authenticateWithOAuth2(
+        account.username,
+        await _credential(),
+      );
+    } else {
+      await client.login(account.username, await _credential());
+    }
     _imap = client;
     _selectedPath = null;
     return client;
@@ -526,8 +589,8 @@ class ImapMailService implements MailService {
     }
     await client.authenticate(
       account.username,
-      _password,
-      em.AuthMechanism.login,
+      await _credential(),
+      account.oauth != null ? em.AuthMechanism.xoauth2 : em.AuthMechanism.login,
     );
     return client;
   }

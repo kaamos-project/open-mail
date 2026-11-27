@@ -32,9 +32,12 @@ Future<void> main() async {
       accounts: accounts,
       secrets: secrets,
       cache: cache,
-      services: const ImapMailServiceFactory(),
+      services: ImapMailServiceFactory(
+        onRefreshTokenChanged: accounts.updatePassword,
+      ),
       files: const PlatformFileActions(),
       htmlBody: platformHtmlBody,
+      oauth: platformOAuthSignIn(),
     ),
   );
 }
