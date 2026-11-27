@@ -37,6 +37,7 @@ The Dart package stays `kaamos_mail` and the keychain keys keep the `kaamos_mail
 ## Android
 
 - `INTERNET` permission.
+- `flutter_inappwebview` is pinned to `6.2.0-beta.3`: the stable 6.1.5 Android plugin uses `proguard-android.txt`, which Android Gradle Plugin 9 refuses. Move back to a stable release once one ships.
 - Backup is disabled, so cache and keys don't end up in Google's backup.
 - The WebView also has `blockNetworkLoads`.
 - The main activity is `singleTask`: OAuth sign-in opens a Custom Tab, and the redirect comes back to the same activity (see [OAuth sign-in](oauth.md#android-in-detail)).
