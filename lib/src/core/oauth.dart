@@ -125,10 +125,18 @@ enum OAuthTarget {
 
   /// iOS: custom URL scheme caught by `ASWebAuthenticationSession`.
   ios,
+
+  /// Android: custom URL scheme caught by `MainActivity` after a Custom
+  /// Tab.
+  android,
 }
 
 /// The iOS bundle identifier (see `ios/Runner.xcodeproj`).
 const iosBundleId = 'dev.kaamos.kaamosMail';
+
+/// The Microsoft redirect on Android. Not the package name: a URL scheme
+/// can't contain `_` (RFC 3986), and `dev.kaamos.kaamos_mail` does.
+const androidRedirect = 'dev.kaamos.kaamosmail://auth';
 
 /// Client IDs come from `--dart-define`, so a fork can use its own without
 /// touching the code, e.g.
@@ -137,14 +145,17 @@ const _googleClientId = String.fromEnvironment('KAAMOS_GOOGLE_CLIENT_ID');
 const _googleIosClientId = String.fromEnvironment(
   'KAAMOS_GOOGLE_IOS_CLIENT_ID',
 );
+const _googleAndroidClientId = String.fromEnvironment(
+  'KAAMOS_GOOGLE_ANDROID_CLIENT_ID',
+);
 const _googleClientSecret = String.fromEnvironment(
   'KAAMOS_GOOGLE_CLIENT_SECRET',
 );
 const _microsoftClientId = String.fromEnvironment('KAAMOS_MICROSOFT_CLIENT_ID');
 
-/// Google's redirect for iOS clients: the client ID reversed as the URL
-/// scheme (`com.googleusercontent.apps.<id>:/oauth2redirect`).
-String? googleIosRedirect(String clientId) {
+/// Google's redirect for iOS and Android clients: the client ID reversed
+/// as the URL scheme (`com.googleusercontent.apps.<id>:/oauth2redirect`).
+String? googleAppRedirect(String clientId) {
   const suffix = '.apps.googleusercontent.com';
   if (!clientId.endsWith(suffix)) return null;
   final id = clientId.substring(0, clientId.length - suffix.length);
@@ -167,12 +178,18 @@ OAuthConfig oauthConfig(
     ),
     tokenEndpoint: Uri.parse('https://oauth2.googleapis.com/token'),
     scopes: const ['https://mail.google.com/', 'openid', 'email', 'profile'],
-    // An iOS client has no secret: PKCE alone.
-    clientId: target == OAuthTarget.ios ? _googleIosClientId : _googleClientId,
-    clientSecret: target == OAuthTarget.ios ? '' : _googleClientSecret,
-    appRedirect: target == OAuthTarget.ios
-        ? googleIosRedirect(_googleIosClientId)
-        : null,
+    // iOS and Android clients have no secret: PKCE alone.
+    clientId: switch (target) {
+      OAuthTarget.desktop => _googleClientId,
+      OAuthTarget.ios => _googleIosClientId,
+      OAuthTarget.android => _googleAndroidClientId,
+    },
+    clientSecret: target == OAuthTarget.desktop ? _googleClientSecret : '',
+    appRedirect: switch (target) {
+      OAuthTarget.desktop => null,
+      OAuthTarget.ios => googleAppRedirect(_googleIosClientId),
+      OAuthTarget.android => googleAppRedirect(_googleAndroidClientId),
+    },
     // offline + consent: without them Google gives no refresh token, and
     // the account would stop working after an hour.
     extraAuthParams: const {'access_type': 'offline', 'prompt': 'consent'},
@@ -208,11 +225,13 @@ OAuthConfig oauthConfig(
     clientId: _microsoftClientId,
     extraAuthParams: const {'prompt': 'select_account'},
     loopbackHost: 'localhost',
-    // The redirect Entra suggests for the iOS platform. Same client ID as
-    // desktop: one app registration, two platforms.
-    appRedirect: target == OAuthTarget.ios
-        ? 'msauth.$iosBundleId://auth'
-        : null,
+    // Same client ID everywhere: one app registration, one redirect per
+    // platform. On iOS the one Entra suggests for the bundle ID.
+    appRedirect: switch (target) {
+      OAuthTarget.desktop => null,
+      OAuthTarget.ios => 'msauth.$iosBundleId://auth',
+      OAuthTarget.android => androidRedirect,
+    },
     imap: const ServerConfig(
       host: 'outlook.office365.com',
       port: 993,
