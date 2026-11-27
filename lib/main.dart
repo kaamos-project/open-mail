@@ -34,6 +34,7 @@ Future<void> main() async {
       cache: cache,
       services: ImapMailServiceFactory(
         onRefreshTokenChanged: accounts.updatePassword,
+        oauthTarget: platformOAuthTarget,
       ),
       files: const PlatformFileActions(),
       htmlBody: platformHtmlBody,

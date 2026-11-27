@@ -49,7 +49,7 @@ class OAuthClient {
     OAuthConfig config, {
     required String code,
     required String codeVerifier,
-    required Uri redirectUri,
+    required String redirectUri,
   }) => _request(
     config,
     config.codeExchangeForm(
@@ -101,8 +101,117 @@ typedef OAuthSignInResult = ({OAuthIdentity identity, OAuthTokens tokens});
 
 /// Signs in with a provider in the browser.
 abstract interface class OAuthSignIn {
+  /// Which client this sign-in uses: the configs must match it.
+  OAuthTarget get target;
+
   /// Opens the provider's page and waits for the user to finish.
   Future<OAuthSignInResult> signIn(OAuthConfig config);
+}
+
+/// The last step, the same for every redirect: code → tokens → identity.
+Future<OAuthSignInResult> _finishSignIn(
+  OAuthClient client,
+  OAuthConfig config, {
+  required String code,
+  required String codeVerifier,
+  required String redirectUri,
+}) async {
+  final tokens = await client.exchangeCode(
+    config,
+    code: code,
+    codeVerifier: codeVerifier,
+    redirectUri: redirectUri,
+  );
+  if (tokens.refreshToken == null) {
+    throw OAuthException(
+      '${config.label} non ha dato un token per restare collegati.',
+    );
+  }
+  final identity = identityFromIdToken(tokens.idToken);
+  if (identity == null) {
+    throw OAuthException(
+      '${config.label} non ha detto qual è il tuo indirizzo.',
+    );
+  }
+  return (identity: identity, tokens: tokens);
+}
+
+/// Reads the redirect the provider sent back: the code, or the reason
+/// there is none. [state] must match the one sent.
+String codeFromRedirect(
+  Map<String, String> params,
+  String state,
+  OAuthConfig config,
+) {
+  if (params['state'] != state) {
+    throw const OAuthException('Risposta non valida: riprova.');
+  }
+  final error = params['error'];
+  if (error != null) {
+    throw OAuthException(
+      error == 'access_denied'
+          ? 'Accesso annullato.'
+          : '${config.label}: ${params['error_description'] ?? error}',
+    );
+  }
+  final code = params['code'];
+  if (code == null) throw const OAuthException('Risposta senza codice.');
+  return code;
+}
+
+/// Shows the sign-in page in a system sheet and returns the redirect URL
+/// it caught. Throws [OAuthException] if the user closes it.
+typedef AuthSessionPresenter =
+    Future<Uri> Function(Uri url, String callbackScheme);
+
+/// Sign-in for iOS: `ASWebAuthenticationSession`.
+///
+/// The system shows the provider's page in a sheet that shares Safari's
+/// cookies but not the app's memory, and closes it as soon as the page
+/// redirects to the app's URL scheme ([OAuthConfig.appRedirect]). No
+/// other app can register to catch that redirect inside the session.
+class AppSessionOAuthSignIn implements OAuthSignIn {
+  /// Creates the sign-in. [present] is the native sheet (a platform channel
+  /// in the app, a fake in tests).
+  AppSessionOAuthSignIn({
+    required this.present,
+    this.target = OAuthTarget.ios,
+    OAuthClient? client,
+  }) : client = client ?? OAuthClient();
+
+  /// Shows the sheet.
+  final AuthSessionPresenter present;
+
+  @override
+  final OAuthTarget target;
+
+  /// Exchanges the code.
+  final OAuthClient client;
+
+  @override
+  Future<OAuthSignInResult> signIn(OAuthConfig config) async {
+    final redirect = config.appRedirect;
+    if (redirect == null) {
+      throw OAuthException('${config.label}: manca il ritorno all\'app.');
+    }
+    final verifier = createCodeVerifier();
+    final state = createCodeVerifier().substring(0, 32);
+    final back = await present(
+      config.authorizationUrl(
+        redirectUri: redirect,
+        state: state,
+        codeChallenge: codeChallengeFor(verifier),
+      ),
+      redirect.substring(0, redirect.indexOf(':')),
+    );
+    return _finishSignIn(
+      client,
+      config,
+      code: codeFromRedirect(back.queryParameters, state, config),
+      codeVerifier: verifier,
+      redirectUri: redirect,
+    );
+  }
 }
 
 /// Sign-in for desktop apps (RFC 8252, "loopback redirect").
@@ -131,6 +240,9 @@ class LoopbackOAuthSignIn implements OAuthSignIn {
   final Duration timeout;
 
   @override
+  OAuthTarget get target => OAuthTarget.desktop;
+
+  @override
   Future<OAuthSignInResult> signIn(OAuthConfig config) async {
     final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     // "localhost" may resolve to ::1 first: listen there too, same port.
@@ -152,9 +264,7 @@ class LoopbackOAuthSignIn implements OAuthSignIn {
         s.listen(requests.add, onError: requests.addError),
     ];
     try {
-      final redirect = Uri.parse(
-        'http://${config.loopbackHost}:${server.port}/',
-      );
+      final redirect = 'http://${config.loopbackHost}:${server.port}/';
       final verifier = createCodeVerifier();
       // state: ties the answer to this attempt, so another page can't
       // inject a code of its own.
@@ -179,24 +289,13 @@ class LoopbackOAuthSignIn implements OAuthSignIn {
       );
       final code = await answer;
       if (code is! String) throw code;
-      final tokens = await client.exchangeCode(
+      return await _finishSignIn(
+        client,
         config,
         code: code,
         codeVerifier: verifier,
         redirectUri: redirect,
       );
-      if (tokens.refreshToken == null) {
-        throw OAuthException(
-          '${config.label} non ha dato un token per restare collegati.',
-        );
-      }
-      final identity = identityFromIdToken(tokens.idToken);
-      if (identity == null) {
-        throw OAuthException(
-          '${config.label} non ha detto qual è il tuo indirizzo.',
-        );
-      }
-      return (identity: identity, tokens: tokens);
     } finally {
       for (final sub in subs) {
         await sub.cancel();
@@ -223,18 +322,7 @@ class LoopbackOAuthSignIn implements OAuthSignIn {
       }
       final ok = params['state'] == state && params['code'] != null;
       await _answer(request, ok);
-      if (params['state'] != state) {
-        throw const OAuthException('Risposta non valida: riprova.');
-      }
-      final error = params['error'];
-      if (error != null) {
-        throw OAuthException(
-          error == 'access_denied'
-              ? 'Accesso annullato.'
-              : '${config.label}: ${params['error_description'] ?? error}',
-        );
-      }
-      return params['code']!;
+      return codeFromRedirect(params, state, config);
     }
     throw const OAuthException('Accesso interrotto.');
   }
