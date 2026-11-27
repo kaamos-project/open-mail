@@ -8,7 +8,8 @@ Tests run with `flutter test` on Linux, locally and in CI. They don't need a Web
 
 | Fake | Replaces |
 |---|---|
-| `FakeMailService` | An in-memory IMAP/SMTP server with Inbox, Sent, Drafts, Archive and Trash. Records sent and appended messages. |
+| `FakeMailService` | An in-memory IMAP/SMTP server with Inbox, Sent, Drafts, Archive and Trash. Records sent and appended messages. A message can have an HTML body and attachments. |
+| `FakeFileActions` | File picker and system apps: records opened attachments and links, returns `toPick` from the picker |
 | `MemorySecretStore` (in `lib/src/data/secret_store.dart`) | The system keychain; `available: false` simulates Linux without Secret Service |
 | `MailCache.inMemory()` | The SQLite file |
 | Sample builders | A sample account, a sample message with a given UID |
@@ -27,7 +28,18 @@ Tests run with `flutter test` on Linux, locally and in CI. They don't need a Web
 | `oauth_test.dart` | PKCE, authorization URL, Microsoft scopes, token parsing |
 | `account_repository_test.dart` | JSON file + keychain, removal |
 | `text_utils_test.dart` | Address parsing and validation, `Re:`/`Fwd:`, quoting, HTML to text, previews |
-| `app_test.dart` | The whole app with fakes: no keychain, first start, OAuth buttons without client ID, desktop and mobile layouts, multiple accounts |
+
+## UI tests in both layouts
+
+`test/ui/` tests the whole app on fakes, one file per area of [Features](features.md): `start_test`, `accounts_test`, `folders_and_list_test`, `reading_test`, `compose_test`.
+
+They use `test/support/app_harness.dart`:
+
+- `AppHarness` builds the app on a fake server, cache, keychain and files. `addAccount()` saves an account before start, `pump()` starts the app in a layout.
+- `testBothLayouts('...', (tester, layout) async { ... })` runs the same test twice, as `[phone]` (390×844) and `[desktop]` (1280×800). Where the two layouts differ (the folders are a page on the phone), the test does the extra step only on the phone.
+- `tapLabel` and `tapText` tap by accessibility label or by text and wait for the UI to settle. Finding widgets by their label also checks that a screen reader can name them.
+
+When you add a feature, add its row to [Features](features.md) and its test here, in both layouts.
 
 Why is the cache tested so much? Because it uses hand-written SQL with no compile-time checks: see [Decisions](decisions.md#sqlite-without-an-orm).
 
