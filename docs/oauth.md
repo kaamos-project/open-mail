@@ -50,7 +50,7 @@ It works on Windows, macOS, Linux, iOS and Android.
 | `data/oauth_client.dart` | The loopback (desktop) and app-session (iOS, Android) sign-in flows, token exchange and refresh |
 | `data/imap_mail_service.dart` | `ImapMailServiceFactory` builds the XOAUTH2 login and saves rotated refresh tokens |
 | `ui/platform.dart` | `platformOAuthSignIn()`: loopback on desktop, the native sheet on iOS and Android |
-| `ios/Runner/AppDelegate.swift` | `AuthSessionPlugin`: shows `ASWebAuthenticationSession` on the `dev.kaamos.mail/oauth` channel |
+| `ios/Runner/AppDelegate.swift` | `AuthSessionPlugin`: shows `ASWebAuthenticationSession` on the `dev.kaamos_project.mail/oauth` channel |
 | `android/app/src/main/kotlin/.../MainActivity.kt` | The same channel on Android: Custom Tab, redirect in `onNewIntent` |
 
 ## Registering the app
@@ -84,8 +84,8 @@ Without them the buttons stay disabled and the screen says which one is missing.
 3. In "Data access" add the scope `https://mail.google.com/`. It is a *restricted* scope.
 4. In "Audience" leave the app in **Testing** and add the test users (at most 100).
 5. In "Clients" create a client of type **Desktop app**. You get a client ID and a client secret. For desktop clients Google says the secret is not confidential, but its token endpoint still requires it.
-6. For iOS create a second client of type **iOS** with bundle ID `dev.kaamos.kaamosMail`. It has no secret. The redirect is the reversed client ID (`com.googleusercontent.apps.yyyy:/oauth2redirect`) and the app works it out by itself.
-7. For Android create a third client of type **Android** with package name `dev.kaamos.kaamos_mail` and the SHA-1 of your signing key (`keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android` for debug builds). In its "Advanced settings" turn on **Enable custom URI scheme**: the app uses `com.googleusercontent.apps.zzzz:/oauth2redirect`, like on iOS.
+6. For iOS create a second client of type **iOS** with bundle ID `dev.kaamos-project.mail`. It has no secret. The redirect is the reversed client ID (`com.googleusercontent.apps.yyyy:/oauth2redirect`) and the app works it out by itself.
+7. For Android create a third client of type **Android** with package name `dev.kaamos_project.mail` and the SHA-1 of your signing key (`keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android` for debug builds). In its "Advanced settings" turn on **Enable custom URI scheme**: the app uses `com.googleusercontent.apps.zzzz:/oauth2redirect`, like on iOS.
 
 Good to know:
 
@@ -97,8 +97,8 @@ Good to know:
 1. In [Microsoft Entra](https://entra.microsoft.com/) go to "App registrations" and choose "New registration".
 2. In "Supported account types" choose accounts in any organization and **personal Microsoft accounts**.
 3. As redirect URI choose the platform **Public client/native (mobile & desktop)** with value `http://localhost`. Microsoft ignores the port for loopback addresses.
-   For iOS add the **iOS / macOS** platform with bundle ID `dev.kaamos.kaamosMail`. Entra creates the redirect `msauth.dev.kaamos.kaamosMail://auth`, which is the one the app uses.
-   For Android add a custom redirect `dev.kaamos.kaamosmail://auth` under **Mobile and desktop applications**. It is not the package name, because a URL scheme can't contain `_`.
+   For iOS add the **iOS / macOS** platform with bundle ID `dev.kaamos-project.mail`. Entra creates the redirect `msauth.dev.kaamos-project.mail://auth`, which is the one the app uses.
+   For Android add a custom redirect `dev.kaamos-project.mail://auth` under **Mobile and desktop applications**. It is not the package name, because a URL scheme can't contain `_`: it is the iOS bundle ID.
 4. In "API permissions" add the delegated permissions:
    - `IMAP.AccessAsUser.All` and `SMTP.Send` from Office 365 Exchange Online (`https://outlook.office.com`);
    - `offline_access`, `openid`, `email` and `profile`.

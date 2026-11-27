@@ -4,6 +4,19 @@
 
 Supported in the MVP: **Windows, macOS, Android, iOS**. Linux arrives in phase 2. There is no web build: a browser cannot open TCP sockets to IMAP, and a proxy would be a server (see [Decisions](decisions.md#native-only-no-web)).
 
+## App identifiers
+
+The domain is `kaamos-project.dev`, so the IDs are that domain reversed. The visible name is "Kaamos Mail" everywhere.
+
+| Platform | ID | Why this form |
+|---|---|---|
+| Android | `dev.kaamos_project.mail` | A Java/Kotlin package name can't contain `-`, so the domain's hyphen becomes `_` |
+| iOS, macOS | `dev.kaamos-project.mail` | A bundle ID allows only letters, digits, `-` and `.`: no `_` |
+
+The OAuth redirect schemes come from these IDs (see [OAuth sign-in](oauth.md#registering-the-app)). A URL scheme can't contain `_`, so Android's Microsoft redirect uses the iOS form, `dev.kaamos-project.mail://auth`.
+
+The Dart package stays `kaamos_mail` and the keychain keys keep the `kaamos_mail.` prefix: they are internal names, and changing them would gain nothing.
+
 ## Windows
 
 - The WebView is WebView2, already present on up-to-date Windows 10/11.

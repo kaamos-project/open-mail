@@ -131,12 +131,14 @@ enum OAuthTarget {
   android,
 }
 
-/// The iOS bundle identifier (see `ios/Runner.xcodeproj`).
-const iosBundleId = 'dev.kaamos.kaamosMail';
+/// The iOS bundle identifier (see `ios/Runner.xcodeproj`). A bundle ID allows
+/// only letters, digits, `-` and `.`, so it can't be the Android ID.
+const iosBundleId = 'dev.kaamos-project.mail';
 
-/// The Microsoft redirect on Android. Not the package name: a URL scheme
-/// can't contain `_` (RFC 3986), and `dev.kaamos.kaamos_mail` does.
-const androidRedirect = 'dev.kaamos.kaamosmail://auth';
+/// The Microsoft redirect on Android. Not the application ID: a URL scheme
+/// can't contain `_` (RFC 3986), and `dev.kaamos_project.mail` does. It
+/// matches the iOS bundle ID instead.
+const androidRedirect = 'dev.kaamos-project.mail://auth';
 
 /// Client IDs come from `--dart-define`, so a fork can use its own without
 /// touching the code, e.g.

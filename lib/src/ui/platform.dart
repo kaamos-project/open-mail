@@ -70,7 +70,7 @@ OAuthTarget get platformOAuthTarget => kIsWeb
     ? OAuthTarget.android
     : OAuthTarget.desktop;
 
-const _oauthChannel = MethodChannel('dev.kaamos.mail/oauth');
+const _oauthChannel = MethodChannel('dev.kaamos_project.mail/oauth');
 
 Future<Uri> _presentAuthSession(Uri url, String callbackScheme) async {
   try {

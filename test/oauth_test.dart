@@ -331,7 +331,7 @@ void main() {
         OAuthProvider.microsoft,
         target: OAuthTarget.android,
       );
-      expect(ms.appRedirect, 'dev.kaamos.kaamosmail://auth');
+      expect(ms.appRedirect, 'dev.kaamos-project.mail://auth');
       expect(ms.appRedirect, isNot(contains('_')));
     });
 
@@ -372,7 +372,7 @@ void main() {
         },
       );
       final result = await signIn.signIn(ms);
-      expect(seen, 'dev.kaamos.kaamosmail');
+      expect(seen, 'dev.kaamos-project.mail');
       expect(result.identity.email, 'a@outlook.com');
     });
   });

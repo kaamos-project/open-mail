@@ -1,4 +1,4 @@
-package dev.kaamos.kaamos_mail
+package dev.kaamos_project.mail
 
 import android.content.ActivityNotFoundException
 import android.content.Intent
@@ -93,6 +93,6 @@ class MainActivity : FlutterActivity() {
     }
 
     private companion object {
-        const val CHANNEL = "dev.kaamos.mail/oauth"
+        const val CHANNEL = "dev.kaamos_project.mail/oauth"
     }
 }
