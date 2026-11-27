@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:kaamos_project_ui/kaamos_project_ui.dart';
@@ -36,12 +37,17 @@ Widget platformHtmlBody(
 
 /// Google and Microsoft sign-in for this platform.
 ///
-/// Desktop only for now: it uses the loopback redirect, which needs a
-/// local server (allowed on macOS by the `network.server` entitlement).
-/// iOS and Android need a redirect to a custom URL scheme instead; they
-/// come in a later step.
+/// - Desktop: loopback redirect, which needs a local server (allowed on
+///   macOS by the `network.server` entitlement).
+/// - iOS: `ASWebAuthenticationSession`, in `ios/Runner/AppDelegate.swift`.
+/// - Android: not yet (Google's Android clients need extra setup for a
+///   custom scheme): `null`, so the buttons don't show.
 OAuthSignIn? platformOAuthSignIn() {
-  if (kIsWeb || !(Platform.isWindows || Platform.isMacOS || Platform.isLinux)) {
+  if (kIsWeb) return null;
+  if (Platform.isIOS) {
+    return AppSessionOAuthSignIn(present: _presentAuthSession);
+  }
+  if (!(Platform.isWindows || Platform.isMacOS || Platform.isLinux)) {
     return null;
   }
   return LoopbackOAuthSignIn(
@@ -51,6 +57,29 @@ OAuthSignIn? platformOAuthSignIn() {
       }
     },
   );
+}
+
+/// The OAuth2 client of this build, matching [platformOAuthSignIn].
+OAuthTarget get platformOAuthTarget =>
+    !kIsWeb && Platform.isIOS ? OAuthTarget.ios : OAuthTarget.desktop;
+
+const _oauthChannel = MethodChannel('dev.kaamos.mail/oauth');
+
+Future<Uri> _presentAuthSession(Uri url, String callbackScheme) async {
+  try {
+    final result = await _oauthChannel.invokeMethod<String>('authenticate', {
+      'url': url.toString(),
+      'callbackScheme': callbackScheme,
+    });
+    if (result == null) throw const OAuthException('Accesso annullato.');
+    return Uri.parse(result);
+  } on PlatformException catch (e) {
+    throw OAuthException(
+      e.code == 'CANCELED'
+          ? 'Accesso annullato.'
+          : 'Accesso non riuscito: ${e.message ?? e.code}',
+    );
+  }
 }
 
 /// A locked-down WebView for showing HTML mail.

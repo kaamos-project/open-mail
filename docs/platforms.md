@@ -19,7 +19,7 @@ Supported in the MVP: **Windows, macOS, Android, iOS**. Linux arrives in phase 2
 ## iOS
 
 - Passwords go in the Keychain; no special permissions.
-- OAuth sign-in is not available yet (needs a custom URL scheme redirect).
+- OAuth sign-in uses `ASWebAuthenticationSession` (in `AppDelegate.swift`), no extra package: see [OAuth sign-in](oauth.md).
 
 ## Android
 

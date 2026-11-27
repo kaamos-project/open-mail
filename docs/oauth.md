@@ -24,30 +24,39 @@ sequenceDiagram
     App->>App: IMAP/SMTP login with XOAUTH2 (access token)
 ```
 
-1. "Sign in with Google" opens the **system browser** on the provider's page. The app never sees your password or second factor.
-2. The app listens on `127.0.0.1` (or `localhost`) on a random port. The browser comes back there with a code (RFC 8252, "loopback redirect").
+1. "Sign in with Google" opens the provider's page in the **system browser** (on iOS in a system sheet, `ASWebAuthenticationSession`). The app never sees your password or second factor.
+2. The provider sends a code back (RFC 8252):
+   - on desktop the app listens on `127.0.0.1` (or `localhost`) on a random port, and the browser comes back there ("loopback redirect", the diagram above);
+   - on iOS the page redirects to an app URL scheme and the sheet closes by itself.
 3. The app exchanges the code for tokens using PKCE (RFC 7636): only whoever started the sign-in knows the `code_verifier`, so a stolen code is useless.
 4. Only the **refresh token** goes in the keychain. The access token lasts about an hour and stays in memory; when it expires the app asks for a new one. One refresh serves concurrent IMAP and SMTP logins. If Microsoft sends a new refresh token, it replaces the old one.
 
-For now this works on Windows, macOS and Linux. iOS and Android need a redirect with an app URL scheme: that comes in a later step.
+For now this works on Windows, macOS, Linux and iOS. Android comes later: it needs a native step of its own (Custom Tabs) and a device to test on.
 
 ### Code map
 
 | File | Role |
 |---|---|
 | `core/oauth.dart` | Provider config (endpoints, scopes, client IDs from `--dart-define`), PKCE helpers, token parsing |
-| `data/oauth_client.dart` | The loopback sign-in flow and token refresh |
+| `data/oauth_client.dart` | The loopback (desktop) and app-session (iOS) sign-in flows, token exchange and refresh |
 | `data/imap_mail_service.dart` | `ImapMailServiceFactory` builds the XOAUTH2 login and saves rotated refresh tokens |
-| `ui/platform.dart` | `platformOAuthSignIn()`: available on desktop, `null` on mobile |
+| `ui/platform.dart` | `platformOAuthSignIn()`: loopback on desktop, the native sheet on iOS, `null` on Android |
+| `ios/Runner/AppDelegate.swift` | `AuthSessionPlugin`: shows `ASWebAuthenticationSession` on the `dev.kaamos.mail/oauth` channel |
 
 ## Registering the app
 
 Client IDs are not secrets, but every build needs one. Pass them with `--dart-define`:
 
 ```sh
+# Desktop
 flutter run -d windows \
   --dart-define=KAAMOS_GOOGLE_CLIENT_ID=xxxx.apps.googleusercontent.com \
   --dart-define=KAAMOS_GOOGLE_CLIENT_SECRET=GOCSPX-xxxx \
+  --dart-define=KAAMOS_MICROSOFT_CLIENT_ID=00000000-0000-0000-0000-000000000000
+
+# iOS: Google needs a separate client, Microsoft reuses the same one
+flutter run -d ios \
+  --dart-define=KAAMOS_GOOGLE_IOS_CLIENT_ID=yyyy.apps.googleusercontent.com \
   --dart-define=KAAMOS_MICROSOFT_CLIENT_ID=00000000-0000-0000-0000-000000000000
 ```
 
@@ -60,6 +69,7 @@ Without them the buttons stay disabled and the screen says which one is missing.
 3. In "Data access" add the scope `https://mail.google.com/`. It is a *restricted* scope.
 4. In "Audience" leave the app in **Testing** and add the test users (at most 100).
 5. In "Clients" create a client of type **Desktop app**. You get a client ID and a client secret. For desktop clients Google says the secret is not confidential, but its token endpoint still requires it.
+6. For iOS create a second client of type **iOS** with bundle ID `dev.kaamos.kaamosMail`. It has no secret. The redirect is the reversed client ID (`com.googleusercontent.apps.yyyy:/oauth2redirect`) and the app works it out by itself.
 
 Good to know:
 
@@ -71,10 +81,11 @@ Good to know:
 1. In [Microsoft Entra](https://entra.microsoft.com/) go to "App registrations" and choose "New registration".
 2. In "Supported account types" choose accounts in any organization and **personal Microsoft accounts**.
 3. As redirect URI choose the platform **Public client/native (mobile & desktop)** with value `http://localhost`. Microsoft ignores the port for loopback addresses.
+   For iOS add the **iOS / macOS** platform with bundle ID `dev.kaamos.kaamosMail`. Entra creates the redirect `msauth.dev.kaamos.kaamosMail://auth`, which is the one the app uses.
 4. In "API permissions" add the delegated permissions:
    - `IMAP.AccessAsUser.All` and `SMTP.Send` from Office 365 Exchange Online (`https://outlook.office.com`);
    - `offline_access`, `openid`, `email` and `profile`.
-5. The client ID is the "Application (client) ID". No secret is needed.
+5. The client ID is the "Application (client) ID". No secret is needed, on desktop or iOS.
 
 Good to know: on work accounts the administrator may have turned off IMAP or SMTP AUTH. In that case sign-in succeeds but the server check fails.
 

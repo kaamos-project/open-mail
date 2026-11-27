@@ -193,6 +193,9 @@ void main() {
 
 class _NoSignIn implements OAuthSignIn {
   @override
+  OAuthTarget get target => OAuthTarget.desktop;
+
+  @override
   Future<OAuthSignInResult> signIn(OAuthConfig config) =>
       throw const OAuthException('not in tests');
 }

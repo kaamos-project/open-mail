@@ -18,8 +18,14 @@ import 'oauth_client.dart';
 class ImapMailServiceFactory implements MailServiceFactory {
   /// Creates the factory. [onRefreshTokenChanged] saves a rotated refresh
   /// token (Microsoft sends a new one on every refresh).
-  ImapMailServiceFactory({OAuthClient? oauth, this.onRefreshTokenChanged})
-    : oauth = oauth ?? OAuthClient();
+  ImapMailServiceFactory({
+    OAuthClient? oauth,
+    this.onRefreshTokenChanged,
+    this.oauthTarget = OAuthTarget.desktop,
+  }) : oauth = oauth ?? OAuthClient();
+
+  /// The OAuth2 client this build signs in with (same as the sign-in).
+  final OAuthTarget oauthTarget;
 
   /// Refreshes OAuth2 access tokens.
   final OAuthClient oauth;
@@ -35,7 +41,7 @@ class ImapMailServiceFactory implements MailServiceFactory {
   Future<String> Function() credentialFor(Account account, String secret) {
     final provider = account.oauth;
     if (provider == null) return () async => secret;
-    final config = oauthConfig(provider);
+    final config = oauthConfig(provider, target: oauthTarget);
     var refreshToken = secret;
     OAuthTokens? current;
     Future<String>? pending;

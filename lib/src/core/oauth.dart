@@ -24,6 +24,7 @@ class OAuthConfig {
     this.clientSecret = '',
     this.extraAuthParams = const {},
     this.loopbackHost = '127.0.0.1',
+    this.appRedirect,
   });
 
   /// Which provider.
@@ -58,6 +59,13 @@ class OAuthConfig {
   /// registers `http://localhost` and ignores the port.
   final String loopbackHost;
 
+  /// On iOS: the redirect to a custom URL scheme of the app, which the
+  /// system sign-in sheet catches. `null` on desktop (loopback).
+  ///
+  /// A string, not a [Uri]: `Uri` lowercases the scheme, and the provider
+  /// compares the redirect character by character.
+  final String? appRedirect;
+
   /// The provider's IMAP server.
   final ServerConfig imap;
 
@@ -69,7 +77,7 @@ class OAuthConfig {
 
   /// The sign-in page URL for one attempt.
   Uri authorizationUrl({
-    required Uri redirectUri,
+    required String redirectUri,
     required String state,
     required String codeChallenge,
     String? loginHint,
@@ -77,7 +85,7 @@ class OAuthConfig {
     queryParameters: {
       'client_id': clientId,
       'response_type': 'code',
-      'redirect_uri': redirectUri.toString(),
+      'redirect_uri': redirectUri,
       'scope': scopes.join(' '),
       'state': state,
       'code_challenge': codeChallenge,
@@ -91,12 +99,12 @@ class OAuthConfig {
   Map<String, String> codeExchangeForm({
     required String code,
     required String codeVerifier,
-    required Uri redirectUri,
+    required String redirectUri,
   }) => {
     'grant_type': 'authorization_code',
     'code': code,
     'code_verifier': codeVerifier,
-    'redirect_uri': redirectUri.toString(),
+    'redirect_uri': redirectUri,
     'client_id': clientId,
     if (clientSecret.isNotEmpty) 'client_secret': clientSecret,
   };
@@ -110,17 +118,47 @@ class OAuthConfig {
   };
 }
 
+/// Where the app runs: each kind of app has its own client at the provider.
+enum OAuthTarget {
+  /// Windows, macOS, Linux: loopback redirect.
+  desktop,
+
+  /// iOS: custom URL scheme caught by `ASWebAuthenticationSession`.
+  ios,
+}
+
+/// The iOS bundle identifier (see `ios/Runner.xcodeproj`).
+const iosBundleId = 'dev.kaamos.kaamosMail';
+
 /// Client IDs come from `--dart-define`, so a fork can use its own without
 /// touching the code, e.g.
 /// `flutter run --dart-define=KAAMOS_GOOGLE_CLIENT_ID=...`.
 const _googleClientId = String.fromEnvironment('KAAMOS_GOOGLE_CLIENT_ID');
+const _googleIosClientId = String.fromEnvironment(
+  'KAAMOS_GOOGLE_IOS_CLIENT_ID',
+);
 const _googleClientSecret = String.fromEnvironment(
   'KAAMOS_GOOGLE_CLIENT_SECRET',
 );
 const _microsoftClientId = String.fromEnvironment('KAAMOS_MICROSOFT_CLIENT_ID');
 
-/// The configuration of [provider].
-OAuthConfig oauthConfig(OAuthProvider provider) => switch (provider) {
+/// Google's redirect for iOS clients: the client ID reversed as the URL
+/// scheme (`com.googleusercontent.apps.<id>:/oauth2redirect`).
+String? googleIosRedirect(String clientId) {
+  const suffix = '.apps.googleusercontent.com';
+  if (!clientId.endsWith(suffix)) return null;
+  final id = clientId.substring(0, clientId.length - suffix.length);
+  return 'com.googleusercontent.apps.$id:/oauth2redirect';
+}
+
+/// The configuration of [provider] for [target].
+///
+/// The token must always be refreshed with the client that issued it, so
+/// sign-in and IMAP/SMTP use the same [target].
+OAuthConfig oauthConfig(
+  OAuthProvider provider, {
+  OAuthTarget target = OAuthTarget.desktop,
+}) => switch (provider) {
   OAuthProvider.google => OAuthConfig(
     provider: provider,
     label: 'Google',
@@ -129,8 +167,12 @@ OAuthConfig oauthConfig(OAuthProvider provider) => switch (provider) {
     ),
     tokenEndpoint: Uri.parse('https://oauth2.googleapis.com/token'),
     scopes: const ['https://mail.google.com/', 'openid', 'email', 'profile'],
-    clientId: _googleClientId,
-    clientSecret: _googleClientSecret,
+    // An iOS client has no secret: PKCE alone.
+    clientId: target == OAuthTarget.ios ? _googleIosClientId : _googleClientId,
+    clientSecret: target == OAuthTarget.ios ? '' : _googleClientSecret,
+    appRedirect: target == OAuthTarget.ios
+        ? googleIosRedirect(_googleIosClientId)
+        : null,
     // offline + consent: without them Google gives no refresh token, and
     // the account would stop working after an hour.
     extraAuthParams: const {'access_type': 'offline', 'prompt': 'consent'},
@@ -166,6 +208,11 @@ OAuthConfig oauthConfig(OAuthProvider provider) => switch (provider) {
     clientId: _microsoftClientId,
     extraAuthParams: const {'prompt': 'select_account'},
     loopbackHost: 'localhost',
+    // The redirect Entra suggests for the iOS platform. Same client ID as
+    // desktop: one app registration, two platforms.
+    appRedirect: target == OAuthTarget.ios
+        ? 'msauth.$iosBundleId://auth'
+        : null,
     imap: const ServerConfig(
       host: 'outlook.office365.com',
       port: 993,

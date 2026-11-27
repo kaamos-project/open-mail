@@ -56,7 +56,7 @@ void main() {
 
   test('authorization URL carries PKCE, state and provider extras', () {
     final url = google.authorizationUrl(
-      redirectUri: Uri.parse('http://127.0.0.1:5000/'),
+      redirectUri: 'http://127.0.0.1:5000/',
       state: 'st',
       codeChallenge: 'ch',
     );
@@ -269,6 +269,59 @@ void main() {
           ),
         ),
       );
+    });
+  });
+
+  group('iOS sign-in sheet', () {
+    final msIos = oauthConfig(OAuthProvider.microsoft, target: OAuthTarget.ios);
+
+    AppSessionOAuthSignIn sheet(
+      Map<String, String> Function(Map<String, String> auth) answer,
+    ) => AppSessionOAuthSignIn(
+      client: OAuthClient(
+        post: (_, form) async {
+          expect(form['redirect_uri'], 'msauth.$iosBundleId://auth');
+          return (
+            200,
+            jsonEncode({
+              'access_token': 'a',
+              'refresh_token': 'r-${form['code']}',
+              'id_token': fakeIdToken({'preferred_username': 'a@outlook.com'}),
+            }),
+          );
+        },
+      ),
+      present: (url, scheme) async {
+        expect(scheme, 'msauth.$iosBundleId');
+        return Uri.parse(
+          'msauth.$iosBundleId://auth',
+        ).replace(queryParameters: answer(url.queryParameters));
+      },
+    );
+
+    test('catches the redirect and exchanges the code', () async {
+      final result = await sheet(
+        (q) => {'code': 'c3', 'state': q['state']!},
+      ).signIn(msIos);
+      expect(result.identity.email, 'a@outlook.com');
+      expect(result.tokens.refreshToken, 'r-c3');
+    });
+
+    test('a wrong state is refused', () async {
+      await expectLater(
+        sheet((_) => {'code': 'c3', 'state': 'evil'}).signIn(msIos),
+        throwsA(isA<OAuthException>()),
+      );
+    });
+
+    test('Google iOS: reversed client ID, no secret', () {
+      expect(
+        googleIosRedirect('123-abc.apps.googleusercontent.com'),
+        'com.googleusercontent.apps.123-abc:/oauth2redirect',
+      );
+      expect(googleIosRedirect('not-a-google-id'), isNull);
+      final g = oauthConfig(OAuthProvider.google, target: OAuthTarget.ios);
+      expect(g.clientSecret, isEmpty);
     });
   });
 

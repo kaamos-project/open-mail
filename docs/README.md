@@ -23,7 +23,7 @@ This wiki explains **how the app works and why it is built this way**. Start fro
 ## Status
 
 - **Phase 1 (MVP)**: done. One IMAP/SMTP account, folders, reading, compose, attachments, actions, server search.
-- **Phase 2**: in progress. Multi-account and unified Inbox are done; OAuth2 works on desktop.
+- **Phase 2**: in progress. Multi-account and unified Inbox are done; OAuth2 works on desktop and iOS.
 - **Phase 3**: PGP, filters, snooze, templates, JMAP, calendar invites.
 
 ## Writing these pages

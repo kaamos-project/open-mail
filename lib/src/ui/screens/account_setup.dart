@@ -146,7 +146,7 @@ class _AccountSetupScreenState extends State<AccountSetupScreen> {
     final env = MailEnvironment.of(context);
     final signIn = env.oauth;
     if (signIn == null) return;
-    final config = oauthConfig(provider);
+    final config = oauthConfig(provider, target: signIn.target);
     setState(() {
       _signingIn = provider;
       _formError = null;
@@ -240,9 +240,13 @@ class _AccountSetupScreenState extends State<AccountSetupScreen> {
   /// "Sign in with Google / Microsoft", only where the platform supports
   /// it. A button without a client ID stays disabled and says why.
   Widget? _providerButtons(BuildContext context) {
-    if (MailEnvironment.of(context).oauth == null) return null;
+    final signIn = MailEnvironment.of(context).oauth;
+    if (signIn == null) return null;
     final theme = KaamosTheme.of(context);
-    final configs = [for (final p in OAuthProvider.values) oauthConfig(p)];
+    final configs = [
+      for (final p in OAuthProvider.values)
+        oauthConfig(p, target: signIn.target),
+    ];
     final missing = configs.where((c) => !c.isConfigured).toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
