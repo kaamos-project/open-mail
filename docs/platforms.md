@@ -26,7 +26,7 @@ Supported in the MVP: **Windows, macOS, Android, iOS**. Linux arrives in phase 2
 - `INTERNET` permission.
 - Backup is disabled, so cache and keys don't end up in Google's backup.
 - The WebView also has `blockNetworkLoads`.
-- OAuth sign-in is not available yet.
+- The main activity is `singleTask`: OAuth sign-in opens a Custom Tab, and the redirect comes back to the same activity (see [OAuth sign-in](oauth.md#android-in-detail)).
 
 ## Linux (phase 2)
 

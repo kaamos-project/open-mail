@@ -164,12 +164,15 @@ String codeFromRedirect(
 typedef AuthSessionPresenter =
     Future<Uri> Function(Uri url, String callbackScheme);
 
-/// Sign-in for iOS: `ASWebAuthenticationSession`.
+/// Sign-in for iOS (`ASWebAuthenticationSession`) and Android (a Custom
+/// Tab).
 ///
-/// The system shows the provider's page in a sheet that shares Safari's
-/// cookies but not the app's memory, and closes it as soon as the page
-/// redirects to the app's URL scheme ([OAuthConfig.appRedirect]). No
-/// other app can register to catch that redirect inside the session.
+/// The system shows the provider's page in a sheet that shares the
+/// browser's cookies but not the app's memory, and closes it as soon as the
+/// page redirects to the app's URL scheme ([OAuthConfig.appRedirect]). On
+/// iOS no other app can catch that redirect inside the session; on Android
+/// another app could register the same scheme, which is why PKCE matters:
+/// a stolen code is useless without the verifier.
 class AppSessionOAuthSignIn implements OAuthSignIn {
   /// Creates the sign-in. [present] is the native sheet (a platform channel
   /// in the app, a fake in tests).

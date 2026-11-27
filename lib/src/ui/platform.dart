@@ -40,12 +40,14 @@ Widget platformHtmlBody(
 /// - Desktop: loopback redirect, which needs a local server (allowed on
 ///   macOS by the `network.server` entitlement).
 /// - iOS: `ASWebAuthenticationSession`, in `ios/Runner/AppDelegate.swift`.
-/// - Android: not yet (Google's Android clients need extra setup for a
-///   custom scheme): `null`, so the buttons don't show.
+/// - Android: a Custom Tab, in `MainActivity.kt`.
 OAuthSignIn? platformOAuthSignIn() {
   if (kIsWeb) return null;
-  if (Platform.isIOS) {
-    return AppSessionOAuthSignIn(present: _presentAuthSession);
+  if (Platform.isIOS || Platform.isAndroid) {
+    return AppSessionOAuthSignIn(
+      present: _presentAuthSession,
+      target: platformOAuthTarget,
+    );
   }
   if (!(Platform.isWindows || Platform.isMacOS || Platform.isLinux)) {
     return null;
@@ -60,8 +62,13 @@ OAuthSignIn? platformOAuthSignIn() {
 }
 
 /// The OAuth2 client of this build, matching [platformOAuthSignIn].
-OAuthTarget get platformOAuthTarget =>
-    !kIsWeb && Platform.isIOS ? OAuthTarget.ios : OAuthTarget.desktop;
+OAuthTarget get platformOAuthTarget => kIsWeb
+    ? OAuthTarget.desktop
+    : Platform.isIOS
+    ? OAuthTarget.ios
+    : Platform.isAndroid
+    ? OAuthTarget.android
+    : OAuthTarget.desktop;
 
 const _oauthChannel = MethodChannel('dev.kaamos.mail/oauth');
 

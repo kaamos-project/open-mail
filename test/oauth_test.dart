@@ -316,12 +316,64 @@ void main() {
 
     test('Google iOS: reversed client ID, no secret', () {
       expect(
-        googleIosRedirect('123-abc.apps.googleusercontent.com'),
+        googleAppRedirect('123-abc.apps.googleusercontent.com'),
         'com.googleusercontent.apps.123-abc:/oauth2redirect',
       );
-      expect(googleIosRedirect('not-a-google-id'), isNull);
+      expect(googleAppRedirect('not-a-google-id'), isNull);
       final g = oauthConfig(OAuthProvider.google, target: OAuthTarget.ios);
       expect(g.clientSecret, isEmpty);
+    });
+  });
+
+  group('Android sign-in', () {
+    test('Microsoft: a scheme without "_", unlike the package name', () {
+      final ms = oauthConfig(
+        OAuthProvider.microsoft,
+        target: OAuthTarget.android,
+      );
+      expect(ms.appRedirect, 'dev.kaamos.kaamosmail://auth');
+      expect(ms.appRedirect, isNot(contains('_')));
+    });
+
+    test('Google: no secret, own client', () {
+      final g = oauthConfig(OAuthProvider.google, target: OAuthTarget.android);
+      expect(g.clientSecret, isEmpty);
+      // Without --dart-define there is no client ID, so no redirect.
+      expect(g.isConfigured, isFalse);
+      expect(g.appRedirect, isNull);
+    });
+
+    test('the sheet gets the scheme before "://"', () async {
+      final ms = oauthConfig(
+        OAuthProvider.microsoft,
+        target: OAuthTarget.android,
+      );
+      String? seen;
+      final signIn = AppSessionOAuthSignIn(
+        target: OAuthTarget.android,
+        client: OAuthClient(
+          post: (_, form) async => (
+            200,
+            jsonEncode({
+              'access_token': 'a',
+              'refresh_token': 'r',
+              'id_token': fakeIdToken({'email': 'a@outlook.com'}),
+            }),
+          ),
+        ),
+        present: (url, scheme) async {
+          seen = scheme;
+          return Uri.parse(androidRedirect).replace(
+            queryParameters: {
+              'code': 'c',
+              'state': url.queryParameters['state']!,
+            },
+          );
+        },
+      );
+      final result = await signIn.signIn(ms);
+      expect(seen, 'dev.kaamos.kaamosmail');
+      expect(result.identity.email, 'a@outlook.com');
     });
   });
 

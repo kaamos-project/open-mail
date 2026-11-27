@@ -19,7 +19,7 @@ It talks directly to your IMAP/SMTP server: no Kaamos server in between, no tele
 **Phase 2 (in progress)**
 
 - Multiple accounts and a unified Inbox ("Tutte le caselle").
-- Sign in with Google and Microsoft (OAuth2 + XOAUTH2) on desktop and iOS.
+- Sign in with Google and Microsoft (OAuth2 + XOAUTH2) on desktop, iOS and Android.
 
 ## Quick start
 
