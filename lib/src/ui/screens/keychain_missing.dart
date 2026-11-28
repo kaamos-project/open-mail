@@ -1,7 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:kaamos_project_ui/kaamos_project_ui.dart';
 
-
 /// Shown when the system keychain doesn't work (usually Linux without GNOME
 /// Keyring or KWallet). The app doesn't start: storing passwords in plain text
 /// is not an option.
