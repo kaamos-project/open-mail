@@ -60,6 +60,12 @@ class FakeFolder {
 
   /// Message text by UID.
   final Map<int, String> bodies = {};
+
+  /// HTML body by UID, for messages that have one.
+  final Map<int, String> html = {};
+
+  /// Attachments by UID.
+  final Map<int, List<AttachmentInfo>> attachments = {};
 }
 
 /// An in-memory IMAP/SMTP server.
@@ -202,8 +208,8 @@ class FakeMailService implements MailService {
       messageId: '<m$uid@esempio.org>',
       references: const [],
       plainText: f.bodies[uid],
-      html: null,
-      attachments: const [],
+      html: f.html[uid],
+      attachments: f.attachments[uid] ?? const [],
       inlineImages: const {},
     );
   }
@@ -338,14 +344,21 @@ class FakeFileActions implements FileActions {
   /// Opened links.
   final List<Uri> opened = [];
 
+  /// Names of the attachments opened.
+  final List<String> openedFiles = [];
+
+  /// What the next [pickAttachments] returns.
+  List<OutgoingAttachment> toPick = const [];
+
   @override
-  Future<void> openAttachment(String fileName, Uint8List bytes) async {}
+  Future<void> openAttachment(String fileName, Uint8List bytes) async =>
+      openedFiles.add(fileName);
 
   @override
   Future<void> openLink(Uri uri) async => opened.add(uri);
 
   @override
-  Future<List<OutgoingAttachment>> pickAttachments() async => const [];
+  Future<List<OutgoingAttachment>> pickAttachments() async => toPick;
 }
 
 /// In-memory accounts: in widget tests real file I/O never completes (time is

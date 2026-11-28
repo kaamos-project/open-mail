@@ -214,11 +214,20 @@ class _MailHomeState extends State<MailHome> {
     if (choice == 'remove') {
       await _confirmRemove(context);
     } else if (choice == 'add') {
+      _closePages(context);
       widget.onAddAccount?.call();
     } else if (choice.startsWith('select:')) {
+      _closePages(context);
       widget.onSelectAccount?.call(choice.substring(7));
     }
   }
+
+  /// On the phone the account panel opens from the folders page. Adding,
+  /// switching or removing an account replaces this whole screen, so the
+  /// pages on top of it must close first, or they would hide the change.
+  /// On desktop there are none and this does nothing.
+  void _closePages(BuildContext context) =>
+      Navigator.of(context).popUntil((route) => route.isFirst);
 
   /// Removing can't be undone locally: ask for confirmation.
   Future<void> _confirmRemove(BuildContext context) async {
@@ -243,7 +252,9 @@ class _MailHomeState extends State<MailHome> {
         ],
       ),
     );
-    if (ok ?? false) widget.onRemoveAccount();
+    if (!(ok ?? false) || !context.mounted) return;
+    _closePages(context);
+    widget.onRemoveAccount();
   }
 
   @override
@@ -259,34 +270,40 @@ class _MailHomeState extends State<MailHome> {
   Widget _desktop(BuildContext context, BoxConstraints constraints) {
     final listWidth = constraints.maxWidth >= 1200 ? 400.0 : 340.0;
     final draft = _desktopDraft;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SizedBox(
-          width: 240,
-          child: FolderList(
-            controller: _c,
-            onCompose: () => _compose(context, const ComposeDraft(), true),
-            onSelected: (_) => _folderChosen(),
-            onAccount: () => _showAccount(context),
-            onUnified: widget.onShowUnified,
-            unified: widget.unified != null,
+    // Three columns scroll on their own. On Android and iOS (a tablet in
+    // landscape) every vertical list would otherwise attach to the same
+    // PrimaryScrollController, and the scrollbar breaks with "attached to
+    // more than one ScrollPosition".
+    return PrimaryScrollController.none(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            width: 240,
+            child: FolderList(
+              controller: _c,
+              onCompose: () => _compose(context, const ComposeDraft(), true),
+              onSelected: (_) => _folderChosen(),
+              onAccount: () => _showAccount(context),
+              onUnified: widget.onShowUnified,
+              unified: widget.unified != null,
+            ),
           ),
-        ),
-        const VerticalHairline(),
-        SizedBox(width: listWidth, child: _list(context, true)),
-        const VerticalHairline(),
-        Expanded(
-          child: draft != null
-              ? ComposeView(
-                  key: ValueKey(_draftKey),
-                  controller: _draftFrom ?? _c,
-                  draft: draft,
-                  onClose: () => setState(() => _desktopDraft = null),
-                )
-              : _desktopReader(context),
-        ),
-      ],
+          const VerticalHairline(),
+          SizedBox(width: listWidth, child: _list(context, true)),
+          const VerticalHairline(),
+          Expanded(
+            child: draft != null
+                ? ComposeView(
+                    key: ValueKey(_draftKey),
+                    controller: _draftFrom ?? _c,
+                    draft: draft,
+                    onClose: () => setState(() => _desktopDraft = null),
+                  )
+                : _desktopReader(context),
+          ),
+        ],
+      ),
     );
   }
 
