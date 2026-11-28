@@ -144,18 +144,25 @@ class _MailHomeState extends State<MailHome> {
   }
 
   /// The message column: unified Inbox or the account's folder.
-  Widget _list(BuildContext context, bool desktop, {Widget? leading}) {
+  Widget _list(
+    BuildContext context,
+    bool desktop, {
+    Widget? leading,
+    Widget? trailing,
+  }) {
     final unified = widget.unified;
     if (unified != null) {
       return UnifiedMessageList(
         inbox: unified,
         leading: leading,
+        trailing: trailing,
         onOpen: (item) => _openUnified(context, item, desktop),
       );
     }
     return MessageList(
       controller: _c,
       leading: leading,
+      trailing: trailing,
       onOpen: (m) => _open(context, m, desktop),
     );
   }
@@ -222,10 +229,10 @@ class _MailHomeState extends State<MailHome> {
     }
   }
 
-  /// On the phone the account panel opens from the folders page. Adding,
-  /// switching or removing an account replaces this whole screen, so the
-  /// pages on top of it must close first, or they would hide the change.
-  /// On desktop there are none and this does nothing.
+  /// Adding, switching or removing an account replaces this whole screen,
+  /// so any page on top of it must close first, or it would hide the change
+  /// (this happened when the panel opened from the phone's folders page).
+  /// Usually there are none and this does nothing.
   void _closePages(BuildContext context) =>
       Navigator.of(context).popUntil((route) => route.isFirst);
 
@@ -333,6 +340,12 @@ class _MailHomeState extends State<MailHome> {
             child: _list(
               context,
               false,
+              // Like Google's apps: the account is the avatar at the
+              // right of the search bar, not in the folders.
+              trailing: _AccountButton(
+                account: _c.account,
+                onPressed: () => _showAccount(context),
+              ),
               leading: MailIconButton(
                 icon: MailIcon.folder,
                 label: 'Cartelle',
@@ -367,7 +380,6 @@ class _MailHomeState extends State<MailHome> {
                               Navigator.of(pageContext).pop();
                               _folderChosen();
                             },
-                            onAccount: () => _showAccount(pageContext),
                             onUnified: widget.onShowUnified == null
                                 ? null
                                 : () {
@@ -418,6 +430,35 @@ class _MailHomeState extends State<MailHome> {
 }
 
 /// A row of the account list in the dialog.
+/// The phone's account button: the active account's avatar.
+class _AccountButton extends StatelessWidget {
+  const _AccountButton({required this.account, required this.onPressed});
+
+  final Account account;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = KaamosTheme.of(context);
+    return KaamosPressable(
+      onPressed: onPressed,
+      semanticLabel: 'Account ${account.email}',
+      builder: (context, states) => KaamosFocusRing(
+        visible: states.contains(WidgetState.focused),
+        color: theme.focusRing,
+        borderRadius: 22,
+        // 44 px: the smallest touch target on a phone.
+        child: SizedBox.square(
+          dimension: 44,
+          child: Center(
+            child: MailAvatar(label: account.displayName, size: 36),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _AccountRow extends StatelessWidget {
   const _AccountRow({
     required this.account,

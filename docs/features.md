@@ -12,6 +12,7 @@ This page is the spec: when a feature moves or changes, update the row and its t
 |---|---|---|
 | Structure | One page at a time: list → message → compose | Three columns: folders (240 px), list (340 px, 400 px from 1200 px), reader |
 | Folders | "Cartelle" button opens them as a page | Always visible on the left |
+| Account | Avatar at the right of the search bar (of the title in "Tutte le caselle"), like Google's apps | Row at the bottom of the folders column, always visible |
 | Compose | Its own page | In the reader column, beside the list |
 
 ## Start and accounts
@@ -24,7 +25,8 @@ This page is the spec: when a feature moves or changes, update the row and its t
 | Manual IMAP and SMTP, checked before saving | Below the sign-in buttons | Same, servers side by side | `accounts_test`: manual account |
 | Servers suggested from the address | Server fields | Same | `accounts_test`: servers suggested |
 | Form errors, one at a time (address, password, servers, ports, duplicate) | Under the form | Same | `accounts_test`: form says what is missing, same address twice |
-| Account panel: switch, add, remove (with confirmation) | Account button at the bottom of the folders page | Account button at the bottom of the folders column | `accounts_test`: switching, removing, same address twice |
+| Account button | Avatar at the right of the search bar; not in the folders page | Row with avatar, name and address at the bottom of the folders column | `accounts_test`: the account button |
+| Account panel (a pop-up): switch, add, remove (with confirmation) | From the avatar | From the row | `accounts_test`: switching, removing, same address twice |
 
 ## Folders and list
 

@@ -16,6 +16,7 @@ class MessageList extends StatefulWidget {
     required this.controller,
     required this.onOpen,
     this.leading,
+    this.trailing,
   });
 
   /// The mailbox state.
@@ -26,6 +27,10 @@ class MessageList extends StatefulWidget {
 
   /// Widget before the title (on mobile: the folders button).
   final Widget? leading;
+
+  /// Widget at the right of the search bar, or of the title where there is
+  /// no search (on mobile: the account avatar).
+  final Widget? trailing;
 
   @override
   State<MessageList> createState() => _MessageListState();
@@ -89,14 +94,24 @@ class _MessageListState extends State<MessageList> {
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: KaamosSearchBar(
-                controller: _search,
-                placeholder: 'Cerca nella cartella',
-                semanticLabel: 'Cerca nella cartella',
-                onSubmitted: _submitSearch,
-                onChanged: (v) {
-                  if (v.isEmpty && c.searchQuery != null) c.search('');
-                },
+              child: Row(
+                children: [
+                  Expanded(
+                    child: KaamosSearchBar(
+                      controller: _search,
+                      placeholder: 'Cerca nella cartella',
+                      semanticLabel: 'Cerca nella cartella',
+                      onSubmitted: _submitSearch,
+                      onChanged: (v) {
+                        if (v.isEmpty && c.searchQuery != null) c.search('');
+                      },
+                    ),
+                  ),
+                  if (widget.trailing != null) ...[
+                    const SizedBox(width: 8),
+                    widget.trailing!,
+                  ],
+                ],
               ),
             ),
             if (c.error != null)
@@ -350,6 +365,7 @@ class UnifiedMessageList extends StatelessWidget {
     required this.inbox,
     required this.onOpen,
     this.leading,
+    this.trailing,
   });
 
   /// The unified Inbox.
@@ -360,6 +376,10 @@ class UnifiedMessageList extends StatelessWidget {
 
   /// Widget before the title (on mobile: the folders button).
   final Widget? leading;
+
+  /// Widget at the right of the search bar, or of the title where there is
+  /// no search (on mobile: the account avatar).
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -397,6 +417,10 @@ class UnifiedMessageList extends StatelessWidget {
                         : 'Aggiorna',
                     onPressed: inbox.syncing ? null : inbox.refresh,
                   ),
+                  if (trailing != null) ...[
+                    const SizedBox(width: 8),
+                    trailing!,
+                  ],
                 ],
               ),
             ),
