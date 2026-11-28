@@ -4,6 +4,11 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:enough_mail/enough_mail.dart' as em;
+// ignore: implementation_imports, see storeLabels.
+import 'package:enough_mail/src/private/imap/command.dart' as imap_private;
+// ignore: implementation_imports, see storeLabels.
+import 'package:enough_mail/src/private/imap/generic_parser.dart'
+    as imap_parser;
 
 import '../core/mail_errors.dart';
 import '../core/mail_service.dart';
@@ -618,6 +623,39 @@ class ImapMailService implements MailService {
     List<int> uids, {
     required bool flagged,
   }) => _store(path, uids, [em.MessageFlags.flagged], add: flagged);
+
+  @override
+  Future<void> storeLabels(
+    String path,
+    List<int> uids,
+    List<String> labels, {
+    required bool add,
+  }) {
+    if (uids.isEmpty || labels.isEmpty) return Future.value();
+    return _withRetry(() async {
+      final (client, box) = await _select(path);
+      if (!_isGmail(client)) {
+        throw const MailFailure(
+          MailFailureKind.server,
+          'Questo server non ha etichette.',
+        );
+      }
+      final sequence = em.MessageSequence.fromIds(uids, isUid: true);
+      final names = [
+        for (final l in labels) imapQuote(encodeModifiedUtf7(l)),
+      ].join(' ');
+      // `uidStore` can only write FLAGS, and enough_mail has no public way
+      // to send another STORE item. Command and GenericParser come from its
+      // private API: if an update of enough_mail breaks this, it breaks
+      // here only (see docs/gmail-labels.md).
+      await client.sendCommand(
+        imap_private.Command(
+          'UID STORE $sequence ${add ? '+' : '-'}X-GM-LABELS.SILENT ($names)',
+        ),
+        imap_parser.GenericParser(client, box),
+      );
+    });
+  }
 
   @override
   Future<void> setAnswered(String path, List<int> uids) =>

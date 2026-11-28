@@ -41,7 +41,7 @@ This page is the spec: when a feature moves or changes, update the row and its t
 | Refresh | Button in the list header | Same | `folders_and_list_test`: refresh |
 | Search in the folder; clearing it shows the folder again | Field in the list header | Same | `folders_and_list_test`: search |
 | "Carica altri" at the bottom (50 at a time) | Same | Same | `folders_and_list_test`: "Carica altri" |
-| Error banner with "Chiudi"; the cached list stays | Over the list | Same | `folders_and_list_test`: server error |
+| Error banner with "Chiudi"; the cached list stays | Over the list, and on the message page for actions on the message | Over the list | `folders_and_list_test`: server error; `gmail_labels_test`: the server refuses |
 | A search with no matches shows "Nessun messaggio trovato.", no error | List | Same | `folders_and_list_test`: search with no matches |
 
 ## Gmail labels
@@ -50,8 +50,9 @@ Only for servers that announce `X-GM-EXT-1` (Gmail): see [Gmail labels](gmail-la
 
 | Feature | Phone | Desktop | Test (`test/ui/`) |
 |---|---|---|---|
-| Labels as badges on the row (system labels and the open folder's label left out) | Below the preview | Same | `gmail_labels_test`: labels show |
-| Labels in the message | Below the subject | Same | `gmail_labels_test`: labels show |
+| Labels as small chips on the row (system labels and the open folder's label left out), no X | Below the preview | Same | `gmail_labels_test`: labels show |
+| Labels in the message, each with an X | Below the subject | Same | `gmail_labels_test`: labels show |
+| The X removes the label (optimistic; back with an error if the server refuses) | Message | Same | `gmail_labels_test`: the X removes, the server refuses |
 | "Etichette" section after the system folders; a label opens like a folder | Drawer | Folders column | `gmail_labels_test`: own section |
 | Labels changed on another device update on refresh | Same | Same | `gmail_labels_test`: changed elsewhere |
 | No labels section on other servers | Same | Same | `gmail_labels_test`: other servers |

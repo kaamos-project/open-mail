@@ -44,6 +44,15 @@ abstract interface class MailService {
   /// Adds or removes the star.
   Future<void> setFlagged(String path, List<int> uids, {required bool flagged});
 
+  /// Adds or removes Gmail labels (decoded names, as in
+  /// [MessageSummary.labels]). Only for servers with labels (Gmail).
+  Future<void> storeLabels(
+    String path,
+    List<int> uids,
+    List<String> labels, {
+    required bool add,
+  });
+
   /// Marks as answered.
   Future<void> setAnswered(String path, List<int> uids);
 

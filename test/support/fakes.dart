@@ -262,6 +262,28 @@ class FakeMailService implements MailService {
   }
 
   @override
+  Future<void> storeLabels(
+    String path,
+    List<int> uids,
+    List<String> labels, {
+    required bool add,
+  }) async {
+    _check();
+    _update(
+      path,
+      uids,
+      (m) => m.copyWith(
+        labels: add
+            ? {...m.labels, ...labels}.toList()
+            : [
+                for (final l in m.labels)
+                  if (!labels.contains(l)) l,
+              ],
+      ),
+    );
+  }
+
+  @override
   Future<void> setAnswered(String path, List<int> uids) async {
     _check();
     _update(path, uids, (m) => m.copyWith(answered: true));

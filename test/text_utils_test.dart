@@ -120,6 +120,17 @@ void main() {
     expect(decodeModifiedUtf7('A&-B'), 'A&B');
   });
 
+  test('encodeModifiedUtf7 is the opposite of the decoder', () {
+    expect(encodeModifiedUtf7('Lavoro'), 'Lavoro');
+    expect(encodeModifiedUtf7('Caffè'), 'Caff&AOg-');
+    expect(encodeModifiedUtf7('Viaggi/Norvègia'), 'Viaggi/Norv&AOg-gia');
+    expect(encodeModifiedUtf7('日本語'), '&ZeVnLIqe-');
+    expect(encodeModifiedUtf7('A&B'), 'A&-B');
+    for (final s in ['Città & mare 🏔', 'Ελληνικά', 'a~b']) {
+      expect(decodeModifiedUtf7(encodeModifiedUtf7(s)), s);
+    }
+  });
+
   test('userLabels leaves out the system labels', () {
     expect(userLabels([r'\Inbox', 'Lavoro', r'\Important', 'Viaggi']), [
       'Lavoro',

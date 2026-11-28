@@ -439,10 +439,9 @@ class ComposeViewState extends State<ComposeView> {
             runSpacing: 8,
             children: [
               for (var i = 0; i < _attachments.length; i++)
-                _Chip(
-                  label:
-                      '${_attachments[i].fileName} · '
-                      '${formatSize(_attachments[i].bytes.length)}',
+                KaamosChip(
+                  '${_attachments[i].fileName} · '
+                  '${formatSize(_attachments[i].bytes.length)}',
                   removeLabel: 'Togli ${_attachments[i].fileName}',
                   onRemove: () => setState(() => _attachments.removeAt(i)),
                 ),
@@ -626,9 +625,9 @@ class _RecipientRow extends StatelessWidget {
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           for (final a in recipients.list)
-            _Chip(
-              label: a.label,
-              tooltip: a.email,
+            KaamosChip(
+              a.label,
+              semanticLabel: '${a.label}, ${a.email}',
               removeLabel: 'Togli ${a.email} da $field',
               onRemove: () {
                 recipients.list.remove(a);
@@ -652,79 +651,6 @@ class _RecipientRow extends StatelessWidget {
                   recipients.commit();
                   onChanged();
                 },
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// A chip with the button to remove it. It never wraps and never shrinks (the
-/// "all squashed" fix on the mockup).
-class _Chip extends StatelessWidget {
-  const _Chip({
-    required this.label,
-    required this.removeLabel,
-    required this.onRemove,
-    this.tooltip,
-  });
-
-  final String label;
-  final String removeLabel;
-  final VoidCallback onRemove;
-  final String? tooltip;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = KaamosTheme.of(context);
-    return Container(
-      height: 28,
-      padding: const EdgeInsets.only(left: 10, right: 2),
-      decoration: BoxDecoration(
-        color: theme.surfaceElevated,
-        border: Border.all(color: theme.hairline),
-        borderRadius: const BorderRadius.all(Radius.circular(14)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 240),
-            child: Semantics(
-              container: true,
-              label: tooltip == null ? label : '$label, $tooltip',
-              child: ExcludeSemantics(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  softWrap: false,
-                  overflow: TextOverflow.ellipsis,
-                  style: KaamosTypography.captionMd.copyWith(color: theme.ink),
-                ),
-              ),
-            ),
-          ),
-          // A node of its own: otherwise the screen reader merges the name and
-          // "Togli" (remove).
-          Semantics(
-            container: true,
-            child: KaamosPressable(
-              onPressed: onRemove,
-              semanticLabel: removeLabel,
-              builder: (context, states) => SizedBox(
-                width: 24,
-                height: 24,
-                child: Center(
-                  child: KaamosIcon(
-                    KaamosIcons.close,
-                    size: 12,
-                    color: states.contains(WidgetState.hovered)
-                        ? theme.ink
-                        : theme.mute,
-                  ),
-                ),
               ),
             ),
           ),
