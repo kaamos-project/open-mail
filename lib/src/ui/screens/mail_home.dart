@@ -204,11 +204,13 @@ class _MailHomeState extends State<MailHome> {
     bool desktop, {
     Widget? leading,
     Widget? trailing,
+    bool compact = false,
   }) {
     final unified = widget.unified;
     if (unified != null) {
       return UnifiedMessageList(
         inbox: unified,
+        compact: compact,
         leading: leading,
         trailing: trailing,
         onOpen: (item) => _openUnified(context, item, desktop),
@@ -216,6 +218,7 @@ class _MailHomeState extends State<MailHome> {
     }
     return MessageList(
       controller: _c,
+      compact: compact,
       leading: leading,
       trailing: trailing,
       onOpen: (m) => _open(context, m, desktop),
@@ -509,7 +512,8 @@ class _MailHomeState extends State<MailHome> {
                 offstage: reading,
                 child: TickerMode(
                   enabled: !reading,
-                  child: _list(context, true),
+                  // As wide as the window: one line per message, like Gmail.
+                  child: _list(context, true, compact: true),
                 ),
               ),
             ),

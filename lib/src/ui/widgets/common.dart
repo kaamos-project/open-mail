@@ -85,7 +85,11 @@ class MailLabels extends StatelessWidget {
     required this.labels,
     this.size = KaamosChipSize.small,
     this.onRemove,
+    this.wrap = true,
   });
+
+  /// False puts the chips on one line, for the one-line list rows.
+  final bool wrap;
 
   /// All the message's labels, system ones included.
   final List<String> labels;
@@ -107,19 +111,18 @@ class MailLabels extends StatelessWidget {
     final shown = visible(labels);
     if (shown.isEmpty) return const SizedBox.shrink();
     final remove = onRemove;
-    final chips = Wrap(
-      spacing: 6,
-      runSpacing: 6,
-      children: [
-        for (final l in shown)
-          KaamosChip(
-            l,
-            size: size,
-            onRemove: remove == null ? null : () => remove(l),
-            removeLabel: 'Togli etichetta $l',
-          ),
-      ],
-    );
+    final children = [
+      for (final l in shown)
+        KaamosChip(
+          l,
+          size: size,
+          onRemove: remove == null ? null : () => remove(l),
+          removeLabel: 'Togli etichetta $l',
+        ),
+    ];
+    final chips = wrap
+        ? Wrap(spacing: 6, runSpacing: 6, children: children)
+        : Row(mainAxisSize: MainAxisSize.min, spacing: 6, children: children);
     // Without X the chips are read as one sentence; with X every chip and
     // its X must stay reachable.
     if (remove != null) return chips;

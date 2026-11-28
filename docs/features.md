@@ -93,6 +93,7 @@ Only for servers that announce `X-GM-EXT-1` (Gmail): see [Gmail labels](gmail-la
 | Settings page, full page with "Indietro"; choices saved at once | From the drawer | From the gear next to the account | `settings_test`: settings open, save the choice |
 | "Carica sempre": remote images load with no banner | Same | Same | `settings_test`: "Carica sempre" |
 | "Solo lista": the open message takes the whole area, "Indietro" brings the list back where it was | — | Area right of the folders | `settings_test`: "Solo lista", switching layout |
+| "Solo lista" rows on one line, like Gmail: sender column, labels, subject – preview with "…", date | — | List | `settings_test`: one line per message |
 | Compose "Pagina": compose in place of list and reader, "Chiudi" goes back | — | Area right of the folders | `settings_test`: "Pagina" |
 
 ## See also

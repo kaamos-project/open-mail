@@ -18,7 +18,7 @@ Every choice applies at once: there is no "Save" button.
 | Setting | Values (default first) | What changes |
 |---|---|---|
 | Immagini remote | `ask` "Chiedi ogni volta", `always` "Carica sempre" | `always` starts every message with remote images allowed, so the "Carica immagini" banner never shows. The sanitizer still runs: only the image loading changes (see [Reading HTML mail](html-mail.md)) |
-| Disposizione su desktop | `split` "Lista e lettura affiancate", `list` "Solo lista" | `list`, like classic Gmail: the list takes the whole area right of the folders; opening a message replaces it, and "Indietro" brings the list back |
+| Disposizione su desktop | `split` "Lista e lettura affiancate", `list` "Solo lista" | `list`, like classic Gmail: the list takes the whole area right of the folders; opening a message replaces it, and "Indietro" brings the list back. As wide as the window, the list shows one line per message like Gmail: sender in a 200 px column, label chips (at most 240 px, no wrap), subject and preview cut with "…", date at the right |
 | Scrittura su desktop | `window` "Finestra flottante", `page` "Pagina" | `page`: compose takes the area right of the folders, with "Chiudi", instead of the floating window at the bottom right |
 
 On the phone the list, the message and compose are always pages, so the last two settings only matter from 900 px up (`desktopBreakpoint`).
@@ -46,7 +46,7 @@ ui/screens/settings_screen  The page
 ## Tests
 
 - `test/settings_test.dart`: JSON round trip, fallbacks, the file store (atomic write, broken file).
-- `test/ui/settings_test.dart`: the page opens from the gear and from the drawer and saves; "Carica sempre"; "Solo lista"; switching layout at once; compose as a page.
+- `test/ui/settings_test.dart`: the page opens from the gear and from the drawer and saves; "Carica sempre"; "Solo lista" (one-line rows); switching layout at once; compose as a page.
 
 ## See also
 
