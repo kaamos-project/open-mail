@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:kaamos_mail/src/core/mail_errors.dart';
 import 'package:kaamos_mail/src/core/mail_service.dart';
 import 'package:kaamos_mail/src/core/models.dart';
 import 'package:kaamos_mail/src/data/account_repository.dart';
@@ -259,6 +260,25 @@ class FakeMailService implements MailService {
   }) async {
     _check();
     _update(path, uids, (m) => m.copyWith(flagged: flagged));
+  }
+
+  @override
+  Future<void> createFolder(String path) async {
+    _check();
+    if (folders.containsKey(path)) {
+      throw MailFailure(
+        MailFailureKind.server,
+        'La cartella $path esiste già.',
+      );
+    }
+    folders[path] = FakeFolder(
+      Folder(
+        path: path,
+        name: path.split('/').last,
+        role: FolderRole.other,
+        isLabel: gmail,
+      ),
+    );
   }
 
   @override

@@ -658,6 +658,13 @@ class ImapMailService implements MailService {
   }
 
   @override
+  Future<void> createFolder(String path) => _withRetry(() async {
+    final client = await _ensureImap();
+    // enough_mail encodes the name in modified UTF-7 itself.
+    await client.createMailbox(path);
+  });
+
+  @override
   Future<void> setAnswered(String path, List<int> uids) =>
       _store(path, uids, [em.MessageFlags.answered], add: true);
 

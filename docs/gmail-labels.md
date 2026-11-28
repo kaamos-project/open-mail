@@ -30,13 +30,28 @@ In the open message each chip has an X ("Togli etichetta …"). The rows have no
 - **enough_mail's private API.** `uidStore` can only write `FLAGS`, and enough_mail has no public way to send another STORE item. `storeLabels` uses its `Command` and `GenericParser` from `src/private`, with an `ignore: implementation_imports`. If an update of enough_mail breaks it, it breaks in that one method; an upstream PR that adds a public way would remove the import.
 - Removing the label of the open folder makes the message leave that folder, as in Gmail. `removeLabel` sees it (`isFolderLabel`, which compares the decoded folder path) and takes the message out of the list like a move; on the phone the message page goes back to the list, like after Archive.
 
+## Adding a label: the picker
+
+The open message's toolbar has a tag button, "Gestisci etichette". It shows only on Gmail, meaning the message has labels or the account has some of its own. It opens `LabelPicker` (`ui/views/label_picker.dart`), like Gmail's "Etichetta come":
+
+- **Where:**
+  - on desktop, a `KaamosPopover` under the button;
+  - on the phone, a page of its own, because a small menu with the keyboard open is hard to use with a thumb.
+- **What it shows:**
+  - a search field on top, which filters by "contains", ignoring case;
+  - every label of the account (`MailboxController.labelNames`, sorted), each with a checkbox, ticked where the message has it.
+- **Each tick applies at once.** There is no "Applica": `addLabel` / `removeLabel` are optimistic, like the X. The trade-off is one `UID STORE` per click instead of one at the end, which is irrelevant for a few clicks.
+- **Unticking the open folder's label** makes the message leave the folder, as with the X: the picker and the message close.
+- **"Crea «…»"** appears when the search matches no label exactly. In Gmail over IMAP a new label is a new folder, so `createLabel` first runs `CREATE` (`MailService.createFolder`; enough_mail encodes the name), then re-reads the folders, then adds the label. If `CREATE` fails, nothing is added and the error shows in the picker.
+- **Known limit:** after adding "Lavoro" from the Inbox, the cached "Lavoro" folder doesn't know until it is opened and refreshed. Refreshing it at once would cost a sync per click.
+
 ## Cache
 
 Labels are saved in `messages.labels_json`, and the label flag in `folders.is_label` (schema version 3). Labels change on other devices just like flags do, so every refresh that re-reads the flags also re-reads the labels. When a server reports no labels (`MessageFlagsState.labels` is null), the saved ones are kept.
 
 ## Not yet
 
-- **Adding labels** (it needs a label picker), and Gmail-style archive and delete (step 2).
+- Gmail-style archive and delete (removing `\Inbox` instead of moving).
 - **No duplicates**: a message with two labels is cached once per folder. `X-GM-MSGID`, the same in every folder, will join them together with threading (`X-GM-THRID`).
 - **Label colours**: Gmail does not expose them over IMAP, so the chips are neutral. A colour derived from the name would not match what you see on the web.
 

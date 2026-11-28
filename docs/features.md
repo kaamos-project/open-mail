@@ -55,6 +55,7 @@ Only for servers that announce `X-GM-EXT-1` (Gmail): see [Gmail labels](gmail-la
 | Labels in the message, each with an X | Below the subject | Same | `gmail_labels_test`: labels show |
 | The X removes the label (optimistic; back with an error if the server refuses) | Message | Same | `gmail_labels_test`: the X removes, the server refuses |
 | Removing the open folder's label takes the message out of that folder (the phone goes back to the list) | Message | Same | `gmail_labels_test`: removing the open label |
+| "Gestisci etichette" (tag button): search, a checkbox per label, ticks apply at once; "Crea «…»" for a new label | Page | Popover under the button | `gmail_labels_test`: the picker adds and removes, search and create, creating fails, picker is a page, no button on other servers |
 | "Etichette" section after the system folders; a label opens like a folder | Drawer | Folders column | `gmail_labels_test`: own section |
 | Labels changed on another device update on refresh | Same | Same | `gmail_labels_test`: changed elsewhere |
 | No labels section on other servers | Same | Same | `gmail_labels_test`: other servers |

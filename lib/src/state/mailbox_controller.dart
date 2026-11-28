@@ -444,6 +444,64 @@ class MailboxController extends ChangeNotifier {
   bool isFolderLabel(String label, [String? path]) =>
       decodeModifiedUtf7(path ?? current.path) == label;
 
+  /// The account's own labels (Gmail), decoded and sorted: what the label
+  /// picker offers.
+  List<String> get labelNames {
+    final names = [
+      for (final f in folders)
+        if (f.isLabel) decodeModifiedUtf7(f.path),
+    ];
+    names.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    return names;
+  }
+
+  /// Adds a Gmail label to a message: at once on screen and in the cache,
+  /// then on the server; back as it was if the server refuses.
+  ///
+  /// The label's own folder in the cache learns about it on its next
+  /// refresh, when it is opened: refreshing it now would cost a sync per
+  /// click.
+  Future<void> addLabel(int uid, String label, {String? path}) {
+    final folder = path ?? current.path;
+    return _optimistic(
+      folder,
+      [uid],
+      (m) => m.labels.contains(label)
+          ? m
+          : m.copyWith(labels: [...m.labels, label]),
+      (s) => s.storeLabels(folder, [uid], [label], add: true),
+    );
+  }
+
+  /// Creates a new Gmail label and adds it to a message. Returns false,
+  /// with [error] set, if the server refuses to create it: then nothing is
+  /// added.
+  Future<bool> createLabel(int uid, String name, {String? path}) async {
+    final label = name.trim();
+    if (label.isEmpty) return false;
+    if (labelNames.contains(label)) {
+      await addLabel(uid, label, path: path);
+      return true;
+    }
+    try {
+      final service = await _ensureService();
+      await service.createFolder(label);
+      final serverFolders = await service.listFolders();
+      cache.saveFolders(account.id, serverFolders);
+      folders = cache.loadFolders(account.id);
+    } on MailFailure catch (e) {
+      error = e.message;
+      _notify();
+      return false;
+    } catch (e, st) {
+      error = describeInternalError(e, st);
+      _notify();
+      return false;
+    }
+    await addLabel(uid, label, path: path);
+    return true;
+  }
+
   /// Removes a Gmail label from a message: at once on screen and in the
   /// cache, then on the server; back as it was if the server refuses.
   ///
