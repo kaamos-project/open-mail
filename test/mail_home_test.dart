@@ -2,17 +2,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kaamos_mail/src/ui/screens/mail_home.dart';
 
 void main() {
-  test('the compose window is a bit less than half of the window', () {
-    expect(composeWindowHeight(1000), 450);
-    expect(composeWindowHeight(1377), closeTo(619.65, 0.01));
+  test('the compose window has a fixed size, like Gmail', () {
+    for (final h in [600.0, 800.0, 1080.0, 2160.0]) {
+      expect(composeWindowHeight(h), 480, reason: 'window $h px tall');
+    }
   });
 
-  test('it never gets too small or too big', () {
-    expect(composeWindowHeight(600), 360, reason: 'min 360');
-    expect(composeWindowHeight(2160), 720, reason: 'max 720 on 4K');
-  });
-
-  test('on a short window it still fits inside the margins', () {
-    expect(composeWindowHeight(380), 380 - 32);
+  test('on a short window it shrinks to fit inside the margins', () {
+    expect(composeWindowHeight(480 + 32), 480);
+    expect(composeWindowHeight(400), 400 - 32);
   });
 }

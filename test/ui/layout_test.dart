@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kaamos_mail/src/ui/screens/mail_home.dart';
 import 'package:kaamos_project_ui/kaamos_project_ui.dart';
 
 import '../support/app_harness.dart';
@@ -119,6 +120,26 @@ void main() {
   );
 
   group('desktop compose window', () {
+    testLayout(Layout.desktop, 'keeps its size when the app window shrinks', (
+      tester,
+    ) async {
+      final app = AppHarness();
+      await app.addAccount();
+      await app.pump(tester, layout: Layout.desktop);
+      await tapLabel(tester, 'Scrivi');
+
+      // A smaller window, still desktop: the compose window doesn't shrink.
+      tester.view.physicalSize = const Size(1000, 600);
+      await tester.pumpAndSettle();
+      expect(tester.getSize(composeWindow), composeWindowSize);
+
+      // Too short for it: it takes the height there is, fields scroll.
+      tester.view.physicalSize = const Size(1000, 420);
+      await tester.pumpAndSettle();
+      expect(tester.getSize(composeWindow), const Size(560, 420 - 32));
+      expect(tester.takeException(), isNull);
+    });
+
     testLayout(Layout.desktop, 'opens at the bottom right, over the reader', (
       tester,
     ) async {
@@ -132,8 +153,8 @@ void main() {
       expect(window.right, 1280 - 16);
       expect(window.bottom, 800 - 16);
       expect(window.width, 560);
-      // A bit less than half of the window: 45% of 800 is 360.
-      expect(window.height, 360);
+      // Fixed, like Gmail's: 560 x 480, whatever the window size.
+      expect(window.size, composeWindowSize);
       // The list stays usable beside it.
       expect(find.text('Oggetto 5'), findsOneWidget);
       // The title follows the subject.

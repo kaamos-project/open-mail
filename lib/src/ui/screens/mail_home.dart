@@ -24,15 +24,19 @@ const double desktopBreakpoint = 900;
 /// floats, like Gmail's.
 const double composeWindowMargin = 16;
 
-/// The desktop compose window's height for a window [available] pixels
-/// tall: a bit less than half, like Gmail's (45%). At least 360px, or the
-/// fields and a few lines of text would not fit; at most 720px, or on a
-/// tall monitor it would become a page again. Never taller than the window
-/// minus the margins.
+/// The desktop compose window's size, fixed like Gmail's: it doesn't
+/// grow or shrink with the app's window. On a 1080p screen it is a bit
+/// less than half the height; on a small window it no longer gets
+/// squashed (Alessio, November 2026, replacing "45% of the window").
+const Size composeWindowSize = Size(560, 480);
+
+/// The compose window's height in a window [available] pixels tall: the
+/// fixed [composeWindowSize] height, unless the app's window is too short
+/// for it. Then it takes all the height there is minus the margins, and
+/// the fields and text scroll inside it, as Gmail does.
 double composeWindowHeight(double available) {
   final room = available - 2 * composeWindowMargin;
-  final wanted = (available * 0.45).clamp(360.0, 720.0);
-  return wanted < room ? wanted : room;
+  return composeWindowSize.height < room ? composeWindowSize.height : room;
 }
 
 /// A page with no animation and the theme background, for the Navigator.
@@ -499,7 +503,7 @@ class _MailHomeState extends State<MailHome> {
     return Positioned(
       right: composeWindowMargin,
       bottom: composeWindowMargin,
-      width: _minimized ? 320 : 560,
+      width: _minimized ? 320 : composeWindowSize.width,
       height: _minimized ? 48 : composeWindowHeight(constraints.maxHeight),
       child: window,
     );
