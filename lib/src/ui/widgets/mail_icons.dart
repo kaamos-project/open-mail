@@ -64,6 +64,21 @@ enum MailIcon {
 
   /// Label (Gmail).
   tag,
+
+  /// Hamburger: opens the folders drawer.
+  menu,
+
+  /// Minus: shrinks a window to its title bar.
+  minimize,
+
+  /// Arrows out: makes a window bigger.
+  expand,
+
+  /// Arrows in: back to the normal size.
+  collapse,
+
+  /// X: closes.
+  close,
 }
 
 /// Draws a [MailIcon].
@@ -313,6 +328,25 @@ class _MailIconPainter extends CustomPainter {
       case MailIcon.tag:
         poly([12, 2.5, 2.5, 2.5, 2.5, 12, 11.5, 21, 21, 11.5], close: true);
         canvas.drawCircle(const Offset(7.5, 7.5), 1.5, fill);
+      case MailIcon.menu:
+        line(4, 6, 20, 6);
+        line(4, 12, 20, 12);
+        line(4, 18, 20, 18);
+      case MailIcon.minimize:
+        line(5, 18, 19, 18);
+      case MailIcon.expand:
+        poly([14, 4, 20, 4, 20, 10]);
+        line(20, 4, 13.5, 10.5);
+        poly([10, 20, 4, 20, 4, 14]);
+        line(4, 20, 10.5, 13.5);
+      case MailIcon.collapse:
+        poly([20, 10, 14, 10, 14, 4]);
+        line(14, 10, 20.5, 3.5);
+        poly([4, 14, 10, 14, 10, 20]);
+        line(10, 14, 3.5, 20.5);
+      case MailIcon.close:
+        line(6, 6, 18, 18);
+        line(18, 6, 6, 18);
     }
   }
 

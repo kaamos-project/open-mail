@@ -31,7 +31,7 @@ Tests run with `flutter test` on Linux, locally and in CI. They don't need a Web
 
 ## UI tests in both layouts
 
-`test/ui/` tests the whole app on fakes, one file per area of [Features](features.md): `start_test`, `accounts_test`, `folders_and_list_test`, `gmail_labels_test`, `reading_test`, `compose_test`.
+`test/ui/` tests the whole app on fakes, one file per area of [Features](features.md): `start_test`, `accounts_test`, `folders_and_list_test`, `gmail_labels_test`, `reading_test`, `compose_test`, plus `layout_test` for what exists in one layout only (the phone's drawer and floating button, the desktop compose window), with `testLayout`.
 
 They use `test/support/app_harness.dart`:
 

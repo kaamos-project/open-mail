@@ -204,7 +204,11 @@ void main() {
     }
 
     await tapLabel(tester, 'Inoltra');
-    expect(find.text('Inoltra'), findsWidgets);
+    // The desktop window's title is the subject, as in Gmail.
+    expect(
+      find.text(layout == Layout.phone ? 'Inoltra' : 'Fwd: Oggetto 5'),
+      findsWidgets,
+    );
     expect(find.bySemanticsLabel('Togli marta@esempio.org da A'), findsNothing);
     await fill(tester, 'Destinatari A', 'luca@esempio.org');
     await tapText(tester, 'Invia');

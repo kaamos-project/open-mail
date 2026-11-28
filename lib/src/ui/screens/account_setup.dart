@@ -427,31 +427,16 @@ class _AccountSetupScreenState extends State<AccountSetupScreen> {
             ],
           ),
         );
-        // First start: nothing behind it, so the form sits on the page
-        // itself. Adding another account (from the account panel) keeps the
-        // card, which reads as a step on top of the mail.
-        final framed = widget.onCancel != null;
+        // The form sits on the page itself, with no card: a framed box on
+        // the dark background read as a pop-up. Adding another account
+        // looks the same as the first start; only "Annulla" tells them
+        // apart.
         return Center(
           child: SingleChildScrollView(
             padding: EdgeInsets.all(wide ? 24 : 16),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 760),
-              child: framed
-                  ? DecoratedBox(
-                      key: const ValueKey('account-setup-card'),
-                      decoration: BoxDecoration(
-                        color: theme.surface,
-                        border: Border.all(color: theme.hairline),
-                        borderRadius: const BorderRadius.all(
-                          Radius.circular(KaamosRadius.lg),
-                        ),
-                      ),
-                      child: Padding(
-                        padding: EdgeInsets.all(wide ? 24 : 16),
-                        child: form,
-                      ),
-                    )
-                  : form,
+              child: form,
             ),
           ),
         );

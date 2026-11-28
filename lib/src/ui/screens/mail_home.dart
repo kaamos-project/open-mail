@@ -1,3 +1,4 @@
+import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:flutter/widgets.dart';
 import 'package:kaamos_project_ui/kaamos_project_ui.dart';
 
@@ -70,13 +71,30 @@ class MailHome extends StatefulWidget {
 }
 
 class _MailHomeState extends State<MailHome> {
-  /// On desktop, composing takes the place of the reader.
+  /// On desktop, the message being written, in a floating window at the
+  /// bottom right (one at a time, as Alessio chose).
   ComposeDraft? _desktopDraft;
 
   /// The account to write from (a reply from the unified Inbox starts from the
   /// message's account).
   MailboxController? _draftFrom;
-  int _draftKey = 0;
+
+  /// A new key per draft: a new message starts from a clean State, and the
+  /// key lets us ask the open one to close first.
+  var _composeKey = GlobalKey<ComposeViewState>();
+  bool _minimized = false;
+  bool _expanded = false;
+
+  /// The phone's "Scrivi" button shows its label until the list scrolls
+  /// down, like Gmail's. A notifier, not setState: only the button
+  /// rebuilds, not the whole list.
+  final _fabExtended = ValueNotifier(true);
+
+  @override
+  void dispose() {
+    _fabExtended.dispose();
+    super.dispose();
+  }
 
   MailboxController get _c => widget.controller;
 
@@ -92,11 +110,7 @@ class _MailHomeState extends State<MailHome> {
   ]) {
     final c = from ?? _c;
     if (desktop) {
-      setState(() {
-        _desktopDraft = draft;
-        _draftFrom = c;
-        _draftKey++;
-      });
+      _composeInWindow(draft, c);
       return;
     }
     Navigator.of(context).push<void>(
@@ -109,6 +123,30 @@ class _MailHomeState extends State<MailHome> {
       ),
     );
   }
+
+  /// Opens [draft] in the desktop window. If one is already open, a new
+  /// empty message just brings it back; anything else asks the open one to
+  /// close first (with "Salvare la bozza?" if something is written).
+  Future<void> _composeInWindow(ComposeDraft draft, MailboxController c) async {
+    final open = _composeKey.currentState;
+    if (_desktopDraft != null && open != null) {
+      if (draft.kind == ComposeKind.fresh && _draftFrom == c) {
+        setState(() => _minimized = false);
+        return;
+      }
+      if (!await open.requestClose()) return;
+    }
+    if (!mounted) return;
+    setState(() {
+      _desktopDraft = draft;
+      _draftFrom = c;
+      _composeKey = GlobalKey<ComposeViewState>();
+      _minimized = false;
+      _expanded = false;
+    });
+  }
+
+  void _closeWindow() => setState(() => _desktopDraft = null);
 
   void _open(BuildContext context, MessageSummary m, bool desktop) {
     _c.open(m.uid);
@@ -123,10 +161,9 @@ class _MailHomeState extends State<MailHome> {
   /// Shows the message open in [c]: on desktop in the reader, on mobile in a
   /// new page.
   void _show(BuildContext context, MailboxController c, bool desktop) {
-    if (desktop) {
-      setState(() => _desktopDraft = null);
-      return;
-    }
+    // On desktop the reader updates by itself; the compose window, if any,
+    // stays open over it, as in Gmail.
+    if (desktop) return;
     Navigator.of(context).push<void>(
       mailPage(
         (context) => PopScope<void>(
@@ -281,7 +318,7 @@ class _MailHomeState extends State<MailHome> {
     // landscape) every vertical list would otherwise attach to the same
     // PrimaryScrollController, and the scrollbar breaks with "attached to
     // more than one ScrollPosition".
-    return PrimaryScrollController.none(
+    final columns = PrimaryScrollController.none(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -299,18 +336,91 @@ class _MailHomeState extends State<MailHome> {
           const VerticalHairline(),
           SizedBox(width: listWidth, child: _list(context, true)),
           const VerticalHairline(),
-          Expanded(
-            child: draft != null
-                ? ComposeView(
-                    key: ValueKey(_draftKey),
-                    controller: _draftFrom ?? _c,
-                    draft: draft,
-                    onClose: () => setState(() => _desktopDraft = null),
-                  )
-                : _desktopReader(context),
+          Expanded(child: _desktopReader(context)),
+        ],
+      ),
+    );
+    if (draft == null) return columns;
+    return Stack(
+      children: [
+        Positioned.fill(child: columns),
+        _composeWindow(context, constraints, draft),
+      ],
+    );
+  }
+
+  /// The desktop compose window, like Gmail's: bottom right over the
+  /// columns, 560px wide; minimized it is just its title bar, expanded it
+  /// fills most of the screen.
+  Widget _composeWindow(
+    BuildContext context,
+    BoxConstraints constraints,
+    ComposeDraft draft,
+  ) {
+    final theme = KaamosTheme.of(context);
+    final view = ComposeView(
+      key: _composeKey,
+      controller: _draftFrom ?? _c,
+      draft: draft,
+      onClose: _closeWindow,
+      window: ComposeWindowControls(
+        minimized: _minimized,
+        expanded: _expanded,
+        onToggleMinimized: () => setState(() => _minimized = !_minimized),
+        onToggleExpanded: () => setState(() {
+          _expanded = !_expanded;
+          _minimized = false;
+        }),
+      ),
+    );
+    final window = DecoratedBox(
+      key: const ValueKey('compose-window'),
+      decoration: BoxDecoration(
+        color: theme.canvas,
+        border: Border.all(color: theme.hairlineStrong),
+        borderRadius: BorderRadius.vertical(
+          top: const Radius.circular(12),
+          bottom: Radius.circular(_expanded ? 12 : 0),
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x80000000),
+            blurRadius: 24,
+            offset: Offset(0, 8),
           ),
         ],
       ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.vertical(
+          top: const Radius.circular(12),
+          bottom: Radius.circular(_expanded ? 12 : 0),
+        ),
+        child: view,
+      ),
+    );
+    if (_expanded) {
+      return Positioned(
+        left: 48,
+        right: 48,
+        top: 32,
+        bottom: 32,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1000),
+            child: window,
+          ),
+        ),
+      );
+    }
+    final height = _minimized
+        ? 48.0
+        : (constraints.maxHeight - 48).clamp(320.0, 640.0);
+    return Positioned(
+      right: 24,
+      bottom: 0,
+      width: _minimized ? 320 : 560,
+      height: height,
+      child: window,
     );
   }
 
@@ -331,67 +441,62 @@ class _MailHomeState extends State<MailHome> {
     );
   }
 
+  /// Scrolling down hides the FAB's label, scrolling up shows it again.
+  bool _onListScroll(UserScrollNotification n) {
+    if (n.metrics.axis != Axis.vertical) return false;
+    final extended = switch (n.direction) {
+      ScrollDirection.reverse => false,
+      ScrollDirection.forward => true,
+      ScrollDirection.idle => _fabExtended.value,
+    };
+    _fabExtended.value = extended;
+    return false;
+  }
+
+  /// The phone's folders: a drawer from the left over the dimmed list.
+  void _showFolders(BuildContext context) {
+    showKaamosDrawer<void>(
+      context: context,
+      barrierLabel: 'Chiudi cartelle',
+      maxWidth: 320,
+      builder: (drawerContext) => FolderList(
+        controller: _c,
+        onSelected: (_) {
+          Navigator.of(drawerContext).pop();
+          _folderChosen();
+        },
+        onUnified: widget.onShowUnified == null
+            ? null
+            : () {
+                Navigator.of(drawerContext).pop();
+                widget.onShowUnified!();
+              },
+        unified: widget.unified != null,
+      ),
+    );
+  }
+
   Widget _mobile(BuildContext context) {
-    final theme = KaamosTheme.of(context);
     return SafeArea(
       child: Stack(
         children: [
           Positioned.fill(
-            child: _list(
-              context,
-              false,
-              // Like Google's apps: the account is the avatar at the
-              // right of the search bar, not in the folders.
-              trailing: _AccountButton(
-                account: _c.account,
-                onPressed: () => _showAccount(context),
-              ),
-              leading: MailIconButton(
-                icon: MailIcon.folder,
-                label: 'Cartelle',
-                size: 44,
-                onPressed: () => Navigator.of(context).push<void>(
-                  mailPage(
-                    (pageContext) => Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
-                          child: Row(
-                            children: [
-                              MailIconButton(
-                                icon: MailIcon.back,
-                                label: 'Indietro',
-                                size: 44,
-                                onPressed: () =>
-                                    Navigator.of(pageContext).pop(),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Expanded(
-                          child: FolderList(
-                            controller: _c,
-                            onCompose: () {
-                              Navigator.of(pageContext).pop();
-                              _compose(context, const ComposeDraft(), false);
-                            },
-                            onSelected: (_) {
-                              Navigator.of(pageContext).pop();
-                              _folderChosen();
-                            },
-                            onUnified: widget.onShowUnified == null
-                                ? null
-                                : () {
-                                    Navigator.of(pageContext).pop();
-                                    widget.onShowUnified!();
-                                  },
-                            unified: widget.unified != null,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+            child: NotificationListener<UserScrollNotification>(
+              onNotification: _onListScroll,
+              child: _list(
+                context,
+                false,
+                // Like Google's apps: the account is the avatar at the
+                // right of the search bar, not in the folders.
+                trailing: _AccountButton(
+                  account: _c.account,
+                  onPressed: () => _showAccount(context),
+                ),
+                leading: MailIconButton(
+                  icon: MailIcon.menu,
+                  label: 'Cartelle',
+                  size: 44,
+                  onPressed: () => _showFolders(context),
                 ),
               ),
             ),
@@ -399,27 +504,13 @@ class _MailHomeState extends State<MailHome> {
           Positioned(
             right: 16,
             bottom: 16,
-            child: KaamosPressable(
-              onPressed: () => _compose(context, const ComposeDraft(), false),
-              semanticLabel: 'Scrivi',
-              builder: (context, states) => KaamosFocusRing(
-                visible: states.contains(WidgetState.focused),
-                color: theme.focusRing,
-                borderRadius: 28,
-                child: Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: theme.ink,
-                    shape: BoxShape.circle,
-                  ),
-                  alignment: Alignment.center,
-                  child: MailIconView(
-                    MailIcon.edit,
-                    size: 22,
-                    color: theme.canvas,
-                  ),
-                ),
+            child: ValueListenableBuilder(
+              valueListenable: _fabExtended,
+              builder: (context, extended, _) => KaamosFab(
+                onPressed: () => _compose(context, const ComposeDraft(), false),
+                icon: const MailIconView(MailIcon.edit),
+                label: 'Scrivi',
+                extended: extended,
               ),
             ),
           ),

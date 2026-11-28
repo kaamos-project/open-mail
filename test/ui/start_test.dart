@@ -1,4 +1,3 @@
-import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kaamos_mail/src/core/oauth.dart';
 import 'package:kaamos_mail/src/data/oauth_client.dart';
@@ -28,7 +27,7 @@ void main() {
     expect(find.text('Aggiungi un account'), findsOneWidget);
     expect(find.text('Annulla'), findsNothing, reason: 'nowhere to go back');
     expect(
-      find.byKey(const ValueKey('account-setup-card')),
+      framedAround(find.text('Aggiungi un account')),
       findsNothing,
       reason: 'on the page itself, not in a card',
     );

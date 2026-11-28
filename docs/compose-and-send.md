@@ -20,7 +20,8 @@ Replies carry `In-Reply-To` and `References` (the conversation's `Message-ID` ch
 ## Writing
 
 - **Plain text only.** HTML compose may come much later.
-- On **desktop** the compose view takes the place of the reader in the side pane; on **mobile** it is a new page.
+- On **desktop** the compose view is a **window at the bottom right**, over the three columns, like Gmail's (`ComposeWindowControls`). Its title is the subject once there is one. It can be minimized to its title bar (the text stays: it lives in `ComposeViewState`, not in the fields), expanded to a large window, and closed. There is **one window at a time** (Alessio's choice, November 2026): "Scrivi" again brings back the open one, while a reply or forward first asks the open message to close (`requestClose`, which shows "Salvare la bozza?" if something is written; "Continua a scrivere" cancels the new one). Opening other messages leaves the window open.
+- On **mobile** it is a new page, opened from the floating "Scrivi" button (`KaamosFab`), whose label hides while the list scrolls down.
 - The text area is `MailTextArea` (`ui/widgets/text_area.dart`), a local widget until a `KaamosTextArea` exists in `kaamos_project_ui`.
 - Attachments are picked with `file_picker` through `FileActions`.
 
