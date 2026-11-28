@@ -1,7 +1,10 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kaamos_mail/src/core/mail_errors.dart';
 import 'package:kaamos_mail/src/core/models.dart';
 import 'package:kaamos_mail/src/ui/views/folder_list.dart';
+import 'package:kaamos_mail/src/ui/views/label_picker.dart';
+import 'package:kaamos_project_ui/kaamos_project_ui.dart';
 
 import '../support/app_harness.dart';
 import '../support/fakes.dart';
@@ -31,6 +34,25 @@ AppHarness gmail() {
 
 Future<void> openFolders(WidgetTester tester, Layout layout) async {
   if (layout == Layout.phone) await tapLabel(tester, 'Cartelle');
+}
+
+/// The picker's row for [label].
+Finder pickerRow(String label) =>
+    find.descendant(of: find.byType(LabelPicker), matching: find.text(label));
+
+/// Whether [label] is ticked in the picker.
+bool ticked(WidgetTester tester, String label) => tester
+    .widget<KaamosCheckbox>(
+      find.ancestor(
+        of: pickerRow(label),
+        matching: find.byType(KaamosCheckbox),
+      ),
+    )
+    .value!;
+
+Future<void> openPicker(WidgetTester tester, String subject) async {
+  await tapText(tester, subject);
+  await tapLabel(tester, 'Gestisci etichette');
 }
 
 void main() {
@@ -182,5 +204,119 @@ void main() {
     await app.pump(tester, layout: layout);
     await openFolders(tester, layout);
     expect(find.text('Etichette'), findsNothing);
+  });
+
+  testBothLayouts('the picker adds and removes labels at once', (
+    tester,
+    layout,
+  ) async {
+    final app = gmail();
+    await app.addAccount();
+    await app.pump(tester, layout: layout);
+    await openPicker(tester, 'Oggetto 5');
+
+    // Every label of the account, ticked where the message has it.
+    expect(ticked(tester, 'Lavoro'), isTrue);
+    expect(ticked(tester, 'Viaggi/Norvegia'), isTrue);
+
+    await tester.tap(pickerRow('Lavoro'));
+    await tester.pumpAndSettle();
+    expect(ticked(tester, 'Lavoro'), isFalse);
+    expect(
+      app.server.folders['INBOX']!.messages[5]!.labels,
+      isNot(contains('Lavoro')),
+    );
+
+    await tester.tap(pickerRow('Lavoro'));
+    await tester.pumpAndSettle();
+    expect(ticked(tester, 'Lavoro'), isTrue);
+    expect(
+      app.server.folders['INBOX']!.messages[5]!.labels,
+      contains('Lavoro'),
+    );
+    expect(
+      app.cache
+          .loadSummaries(testAccount.id, 'INBOX')
+          .firstWhere((m) => m.uid == 5)
+          .labels,
+      contains('Lavoro'),
+    );
+  });
+
+  testBothLayouts('the search filters, and creates a new label', (
+    tester,
+    layout,
+  ) async {
+    final app = gmail();
+    await app.addAccount();
+    await app.pump(tester, layout: layout);
+    await openPicker(tester, 'Oggetto 3');
+    final field = find.descendant(
+      of: find.byType(LabelPicker),
+      matching: find.byType(EditableText),
+    );
+
+    await tester.enterText(field, 'viag');
+    await tester.pumpAndSettle();
+    expect(pickerRow('Viaggi/Norvegia'), findsOneWidget);
+    expect(pickerRow('Lavoro'), findsNothing);
+    expect(find.textContaining('Crea «'), findsOneWidget);
+
+    await tester.enterText(field, 'Montagna');
+    await tester.pumpAndSettle();
+    await tapText(tester, 'Crea «Montagna»');
+
+    expect(app.server.folders['Montagna']?.folder.isLabel, isTrue);
+    expect(app.server.folders['INBOX']!.messages[3]!.labels, ['Montagna']);
+    // The field empties and the new label is in the list, ticked.
+    expect(ticked(tester, 'Montagna'), isTrue);
+  });
+
+  testBothLayouts('if creating fails, nothing is added', (
+    tester,
+    layout,
+  ) async {
+    final app = gmail();
+    await app.addAccount();
+    await app.pump(tester, layout: layout);
+    await openPicker(tester, 'Oggetto 3');
+
+    await tester.enterText(
+      find.descendant(
+        of: find.byType(LabelPicker),
+        matching: find.byType(EditableText),
+      ),
+      'Montagna',
+    );
+    await tester.pumpAndSettle();
+    app.server.failWith = const MailFailure(
+      MailFailureKind.server,
+      'Il server ha risposto: NO',
+    );
+    await tapText(tester, 'Crea «Montagna»');
+
+    expect(app.server.folders.containsKey('Montagna'), isFalse);
+    expect(app.server.folders['INBOX']!.messages[3]!.labels, isEmpty);
+    expect(find.textContaining('Il server ha risposto: NO'), findsWidgets);
+  });
+
+  testLayout(Layout.phone, 'on the phone the picker is a page', (tester) async {
+    final app = gmail();
+    await app.addAccount();
+    await app.pump(tester, layout: Layout.phone);
+    await openPicker(tester, 'Oggetto 5');
+
+    expect(framedAround(find.byType(LabelPicker)), findsNothing);
+    await tapLabel(tester, 'Indietro');
+    expect(find.byType(LabelPicker), findsNothing);
+    expect(find.bySemanticsLabel('Togli etichetta Lavoro'), findsOneWidget);
+  });
+
+  testBothLayouts('no label button on other servers', (tester, layout) async {
+    final app = AppHarness();
+    await app.addAccount();
+    await app.pump(tester, layout: layout);
+    await tapText(tester, 'Oggetto 5');
+    expect(find.bySemanticsLabel('Gestisci etichette'), findsNothing);
   });
 }

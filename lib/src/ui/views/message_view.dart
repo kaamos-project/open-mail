@@ -11,9 +11,11 @@ import '../../core/text_utils.dart';
 import '../../state/compose_draft.dart';
 import '../../state/mailbox_controller.dart';
 import '../environment.dart';
+import '../screens/mail_home.dart' show desktopBreakpoint, mailPage;
 import '../widgets/common.dart';
 import '../widgets/mail_icons.dart';
 import '../widgets/text_area.dart';
+import 'label_picker.dart';
 
 /// The open message: header, actions, body and attachments.
 class MessageView extends StatelessWidget {
@@ -250,6 +252,15 @@ class _MessageBodyState extends State<_MessageBody> {
             widget.onBack?.call();
           },
         ),
+        // Gmail only: other servers have folders, not labels. A Gmail
+        // account shows labels on its messages, or has some of its own.
+        if (labels.isNotEmpty || c.labelNames.isNotEmpty)
+          _LabelButton(
+            controller: c,
+            uid: s.uid,
+            path: path,
+            onBack: widget.onBack,
+          ),
         if (archive != null && !inArchive)
           MailIconButton(
             icon: const KaamosIcon(KaamosIcons.archive),
@@ -495,6 +506,105 @@ class _AttachmentChip extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// "Etichette": on desktop a popover under the button, on the phone a
+/// page of its own (a small menu with the keyboard open is hard to use
+/// with a thumb).
+class _LabelButton extends StatelessWidget {
+  const _LabelButton({
+    required this.controller,
+    required this.uid,
+    required this.path,
+    required this.onBack,
+  });
+
+  final MailboxController controller;
+  final int uid;
+  final String? path;
+  final VoidCallback? onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    final desktop = MediaQuery.sizeOf(context).width >= desktopBreakpoint;
+    if (!desktop) {
+      return MailIconButton(
+        icon: const KaamosIcon(KaamosIcons.tag),
+        label: 'Gestisci etichette',
+        onPressed: () => _openPage(context),
+      );
+    }
+    return KaamosPopover(
+      content: SizedBox(
+        width: 288,
+        child: LabelPicker(
+          controller: controller,
+          uid: uid,
+          path: path,
+          onLeave: () => onBack?.call(),
+        ),
+      ),
+      builder: (context, overlay) => MailIconButton(
+        icon: const KaamosIcon(KaamosIcons.tag),
+        label: 'Gestisci etichette',
+        onPressed: overlay.toggle,
+      ),
+    );
+  }
+
+  void _openPage(BuildContext context) {
+    Navigator.of(context).push<void>(
+      mailPage(
+        (page) => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 8, 16, 8),
+              child: Row(
+                children: [
+                  MailIconButton(
+                    icon: const KaamosIcon(KaamosIcons.chevronLeft),
+                    label: 'Indietro',
+                    size: 44,
+                    onPressed: () => Navigator.of(page).pop(),
+                  ),
+                  const SizedBox(width: 4),
+                  Semantics(
+                    header: true,
+                    child: Text(
+                      'Etichette',
+                      style: KaamosTypography.headingSm.copyWith(
+                        color: KaamosTheme.of(page).ink,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Hairline(),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: LabelPicker(
+                    controller: controller,
+                    uid: uid,
+                    path: path,
+                    onLeave: () {
+                      // Back past the message too: it left the folder.
+                      Navigator.of(page).pop();
+                      onBack?.call();
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

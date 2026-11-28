@@ -53,6 +53,10 @@ abstract interface class MailService {
     required bool add,
   });
 
+  /// Creates a folder. On Gmail a folder is a label, so this creates a
+  /// label: [path] is its decoded name, "/" separates nested labels.
+  Future<void> createFolder(String path);
+
   /// Marks as answered.
   Future<void> setAnswered(String path, List<int> uids);
 
