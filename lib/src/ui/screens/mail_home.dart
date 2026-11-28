@@ -17,6 +17,21 @@ import '../widgets/mail_icons.dart';
 /// other (mobile).
 const double desktopBreakpoint = 900;
 
+/// The gap between the desktop compose window and the window's edges: it
+/// floats, like Gmail's.
+const double composeWindowMargin = 16;
+
+/// The desktop compose window's height for a window [available] pixels
+/// tall: a bit less than half, like Gmail's (45%). At least 360px, or the
+/// fields and a few lines of text would not fit; at most 720px, or on a
+/// tall monitor it would become a page again. Never taller than the window
+/// minus the margins.
+double composeWindowHeight(double available) {
+  final room = available - 2 * composeWindowMargin;
+  final wanted = (available * 0.45).clamp(360.0, 720.0);
+  return wanted < room ? wanted : room;
+}
+
 /// A page with no animation and the theme background, for the Navigator.
 Route<T> mailPage<T>(WidgetBuilder builder) => PageRouteBuilder<T>(
   transitionDuration: Duration.zero,
@@ -378,10 +393,7 @@ class _MailHomeState extends State<MailHome> {
       decoration: BoxDecoration(
         color: theme.canvas,
         border: Border.all(color: theme.hairlineStrong),
-        borderRadius: BorderRadius.vertical(
-          top: const Radius.circular(12),
-          bottom: Radius.circular(_expanded ? 12 : 0),
-        ),
+        borderRadius: const BorderRadius.all(Radius.circular(12)),
         boxShadow: const [
           BoxShadow(
             color: Color(0x80000000),
@@ -391,10 +403,7 @@ class _MailHomeState extends State<MailHome> {
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.vertical(
-          top: const Radius.circular(12),
-          bottom: Radius.circular(_expanded ? 12 : 0),
-        ),
+        borderRadius: const BorderRadius.all(Radius.circular(12)),
         child: view,
       ),
     );
@@ -412,14 +421,11 @@ class _MailHomeState extends State<MailHome> {
         ),
       );
     }
-    final height = _minimized
-        ? 48.0
-        : (constraints.maxHeight - 48).clamp(320.0, 640.0);
     return Positioned(
-      right: 24,
-      bottom: 0,
+      right: composeWindowMargin,
+      bottom: composeWindowMargin,
       width: _minimized ? 320 : 560,
-      height: height,
+      height: _minimized ? 48 : composeWindowHeight(constraints.maxHeight),
       child: window,
     );
   }

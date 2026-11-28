@@ -317,6 +317,7 @@ class ComposeViewState extends State<ComposeView> {
         ),
         const Hairline(),
         ..._fields(context),
+        Expanded(child: SingleChildScrollView(child: _bodyField())),
       ],
     );
   }
@@ -336,10 +337,27 @@ class ComposeViewState extends State<ComposeView> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         bar,
+        // The window can be as short as 360px: with Cc and Bcc open the
+        // fields alone would not fit. Fields and text scroll together, and
+        // the text fills whatever room is left (minHeight + IntrinsicHeight:
+        // not a lazy sliver list, so no field is thrown away while it is
+        // scrolled out of view).
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: _fields(context),
+          child: LayoutBuilder(
+            builder: (context, box) => SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: box.maxHeight),
+                child: IntrinsicHeight(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      ..._fields(context),
+                      Expanded(child: _bodyField()),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
         DecoratedBox(
@@ -448,21 +466,20 @@ class ComposeViewState extends State<ComposeView> {
             ],
           ),
         ),
-      Expanded(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-          child: MailTextArea(
-            controller: _body,
-            focusNode: _bodyFocus,
-            autofocus: widget.draft.to.isNotEmpty,
-            maxLines: null,
-            placeholder: 'Scrivi il messaggio',
-            semanticLabel: 'Testo del messaggio',
-          ),
-        ),
-      ),
     ];
   }
+
+  Widget _bodyField() => Padding(
+    padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+    child: MailTextArea(
+      controller: _body,
+      focusNode: _bodyFocus,
+      autofocus: widget.draft.to.isNotEmpty,
+      maxLines: null,
+      placeholder: 'Scrivi il messaggio',
+      semanticLabel: 'Testo del messaggio',
+    ),
+  );
 }
 
 /// The title bar of the desktop compose window. A click on the title

@@ -101,9 +101,12 @@ void main() {
 
       await tapLabel(tester, 'Scrivi');
       final window = tester.getRect(composeWindow);
-      expect(window.right, 1280 - 24);
-      expect(window.bottom, 800);
+      // Floating: 16px from the right and bottom edges, like Gmail.
+      expect(window.right, 1280 - 16);
+      expect(window.bottom, 800 - 16);
       expect(window.width, 560);
+      // A bit less than half of the window: 45% of 800 is 360.
+      expect(window.height, 360);
       // The list stays usable beside it.
       expect(find.text('Oggetto 5'), findsOneWidget);
       // The title follows the subject.
@@ -128,6 +131,7 @@ void main() {
       await fill(tester, 'Testo del messaggio', 'Partiamo alle 7.');
       await tapLabel(tester, 'Riduci');
       expect(tester.getSize(composeWindow), const Size(320, 48));
+      expect(tester.getRect(composeWindow).bottom, 800 - 16);
       expect(find.bySemanticsLabel('Testo del messaggio'), findsNothing);
 
       // A message can be read meanwhile, and the window stays.
