@@ -217,14 +217,32 @@ class ImapMailService implements MailService {
     }
   });
 
+  /// Gmail's IMAP extensions: labels, message and thread IDs.
+  static bool _isGmail(em.ImapClient client) =>
+      client.serverInfo.supports('X-GM-EXT-1');
+
+  /// Gmail's own folders ("[Gmail]/Tutti i messaggi", "[Gmail]/Speciali"…):
+  /// "[Google Mail]" in some countries.
+  static final _gmailSystemFolder = RegExp(r'^\[(Gmail|Google Mail)\]/');
+
   @override
   Future<List<Folder>> listFolders() => _withRetry(() async {
     final client = await _ensureImap();
+    final gmail = _isGmail(client);
     final boxes = await client.listMailboxes(recursive: true);
     final folders = [
       for (final box in boxes)
         if (!box.isNotSelectable)
-          Folder(path: box.path, name: _folderName(box), role: _role(box)),
+          Folder(
+            path: box.path,
+            name: _folderName(box),
+            role: _role(box),
+            isLabel:
+                gmail &&
+                _role(box) == FolderRole.other &&
+                !box.isSpecialUse &&
+                !_gmailSystemFolder.hasMatch(box.path),
+          ),
     ];
     folders.sort(compareFolders);
     return folders;
@@ -291,9 +309,10 @@ class ImapMailService implements MailService {
     return _withRetry(() async {
       final (client, _) = await _select(path);
       final sequence = em.MessageSequence.fromIds(uids, isUid: true);
+      final labels = _isGmail(client) ? ' X-GM-LABELS' : '';
       final result = await client.uidFetchMessages(
         sequence,
-        '(UID FLAGS ENVELOPE BODYSTRUCTURE)',
+        '(UID FLAGS ENVELOPE BODYSTRUCTURE$labels)',
       );
       final previews = await _fetchPreviews(client, result.messages);
       return [
@@ -377,17 +396,25 @@ class ImapMailService implements MailService {
       flagged: m.isFlagged,
       answered: m.isAnswered,
       hasAttachments: m.body != null && m.hasAttachments(),
+      labels: _labels(m) ?? const [],
     );
   }
+
+  /// Gmail sends labels in modified UTF-7, like folder names.
+  static List<String>? _labels(em.MimeMessage m) => m.xGmLabels == null
+      ? null
+      : [for (final l in m.xGmLabels!) decodeModifiedUtf7(l)];
 
   @override
   Future<Map<int, MessageFlagsState>> fetchFlags(String path, List<int> uids) {
     if (uids.isEmpty) return Future.value(const {});
     return _withRetry(() async {
       final (client, _) = await _select(path);
+      // Labels change from other devices like flags do: refresh them too.
+      final labels = _isGmail(client) ? ' X-GM-LABELS' : '';
       final result = await client.uidFetchMessages(
         em.MessageSequence.fromIds(uids, isUid: true),
-        '(UID FLAGS)',
+        '(UID FLAGS$labels)',
       );
       return {
         for (final m in result.messages)
@@ -396,6 +423,7 @@ class ImapMailService implements MailService {
               seen: m.isSeen,
               flagged: m.isFlagged,
               answered: m.isAnswered,
+              labels: _labels(m),
             ),
       };
     });
@@ -420,9 +448,10 @@ class ImapMailService implements MailService {
         final (client, _) = await _select(path);
         // BODY.PEEK: reading the message must not mark it as read by itself; we
         // do that with setSeen, so the user can undo it.
+        final labels = _isGmail(client) ? ' X-GM-LABELS' : '';
         final result = await client.uidFetchMessage(
           uid,
-          '(UID FLAGS ENVELOPE BODY.PEEK[])',
+          '(UID FLAGS ENVELOPE BODY.PEEK[]$labels)',
         );
         if (result.messages.isEmpty) {
           throw StateError('Messaggio $uid non trovato in $path');
@@ -472,6 +501,7 @@ class ImapMailService implements MailService {
         flagged: summary.flagged,
         answered: summary.answered,
         hasAttachments: attachments.isNotEmpty,
+        labels: summary.labels,
       ),
       cc: _addresses(m.envelope?.cc ?? m.cc),
       replyTo: _addresses(m.envelope?.replyTo ?? m.replyTo),

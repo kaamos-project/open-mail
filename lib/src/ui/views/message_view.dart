@@ -185,6 +185,7 @@ class _MessageBodyState extends State<_MessageBody> {
     // The star changes in the list (optimistic update), not in the content
     // already downloaded: read it from there.
     final flagged = c.openSummary?.flagged ?? s.flagged;
+    final labels = c.openSummary?.labels ?? s.labels;
     final me = c.account;
     // The message may come from a folder other than the open one (unified
     // Inbox): every action says which.
@@ -281,6 +282,10 @@ class _MessageBodyState extends State<_MessageBody> {
               style: KaamosTypography.headingMd.copyWith(color: theme.ink),
             ),
           ),
+          if (MailLabels.visible(labels, path).isNotEmpty) ...[
+            const SizedBox(height: 8),
+            MailLabels(labels: labels, hide: path),
+          ],
           const SizedBox(height: 16),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,

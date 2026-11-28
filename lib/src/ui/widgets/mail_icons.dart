@@ -61,6 +61,9 @@ enum MailIcon {
 
   /// Padlock.
   lock,
+
+  /// Label (Gmail).
+  tag,
 }
 
 /// Draws a [MailIcon].
@@ -307,6 +310,9 @@ class _MailIconPainter extends CustomPainter {
           ..arcToPoint(const Offset(16, 8), radius: const Radius.circular(4))
           ..lineTo(16, 11);
         canvas.drawPath(p, stroke);
+      case MailIcon.tag:
+        poly([12, 2.5, 2.5, 2.5, 2.5, 12, 11.5, 21, 21, 11.5], close: true);
+        canvas.drawCircle(const Offset(7.5, 7.5), 1.5, fill);
     }
   }
 

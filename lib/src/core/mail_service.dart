@@ -67,8 +67,14 @@ abstract interface class MailService {
   Future<void> close();
 }
 
-/// The flags of a message, without the rest.
-typedef MessageFlagsState = ({bool seen, bool flagged, bool answered});
+/// The flags of a message, without the rest. [labels] is null where the
+/// server has no Gmail labels.
+typedef MessageFlagsState = ({
+  bool seen,
+  bool flagged,
+  bool answered,
+  List<String>? labels,
+});
 
 /// Result of the connection test on the "Add account" screen.
 class ConnectionCheckResult {

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:html/parser.dart' as html_parser;
 
 import 'models.dart';
@@ -43,6 +45,36 @@ String imapQuote(String value) {
       .replaceAll('"', r'\"');
   return '"$escaped"';
 }
+
+/// Decodes IMAP's "modified UTF-7" (RFC 3501, 5.1.3), used by folder names
+/// and Gmail labels: `Caff&AOg-` is "Caffè", `&-` is "&".
+String decodeModifiedUtf7(String text) {
+  if (!text.contains('&')) return text;
+  return text.replaceAllMapped(RegExp('&([A-Za-z0-9+,]*)-'), (m) {
+    final b64 = m[1]!;
+    if (b64.isEmpty) return '&';
+    // Base64 with "," instead of "/", no padding, of UTF-16 big-endian.
+    var normal = b64.replaceAll(',', '/');
+    normal += '=' * ((4 - normal.length % 4) % 4);
+    try {
+      final bytes = base64.decode(normal);
+      final units = [
+        for (var i = 0; i + 1 < bytes.length; i += 2)
+          (bytes[i] << 8) | bytes[i + 1],
+      ];
+      return String.fromCharCodes(units);
+    } on FormatException {
+      return m[0]!;
+    }
+  });
+}
+
+/// The labels to show: Gmail's system labels start with `\` (`\Inbox`,
+/// `\Important`, `\Sent`…) and have their own folders or icons.
+List<String> userLabels(List<String> labels) => [
+  for (final l in labels)
+    if (!l.startsWith(r'\')) l,
+];
 
 /// Strips `<` and `>` from a Content-ID or Message-ID.
 String stripAngles(String value) {

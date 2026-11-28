@@ -48,14 +48,14 @@ UIDs grow as messages **arrive in a folder**, so an old mail you just moved into
 
 `INTERNALDATE` is the date the server received the message, and it does not change when the message moves. The IMAP `SORT` extension would do this on the server, but Gmail does not support it. So the app keeps its own lightweight index (`arrival_dates`) of **every** UID in the folder, even messages never shown, and sorts locally. On a tie the higher UID wins.
 
-## Schema (version 2)
+## Schema (version 3)
 
 `data/mail_cache.dart`. Every table is keyed by `account_id`, so one database serves every account.
 
 | Table | Key | Content |
 |---|---|---|
-| `folders` | `account_id, path` | name, role (inbox, sent, drafts…), `uid_validity` |
-| `messages` | `account_id, path, uid` | sender, recipients (JSON), subject, date, preview, flags, has attachments |
+| `folders` | `account_id, path` | name, role (inbox, sent, drafts…), `is_label` (a Gmail label, see [Gmail labels](gmail-labels.md)), `uid_validity` |
+| `messages` | `account_id, path, uid` | sender, recipients (JSON), subject, date, preview, flags, has attachments, Gmail labels (`labels_json`) |
 | `arrival_dates` | `account_id, path, uid` | `arrival_ms`, with index `arrival_order` |
 
 Notes:

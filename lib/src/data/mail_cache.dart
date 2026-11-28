@@ -32,7 +32,7 @@ class MailCache {
 
   final Database _db;
 
-  static const _schemaVersion = 2;
+  static const _schemaVersion = 3;
 
   void _migrate() {
     _db.execute('PRAGMA journal_mode = WAL');
@@ -51,6 +51,7 @@ class MailCache {
         path TEXT NOT NULL,
         name TEXT NOT NULL,
         role TEXT NOT NULL,
+        is_label INTEGER NOT NULL DEFAULT 0,
         uid_validity INTEGER,
         PRIMARY KEY (account_id, path)
       ) STRICT;
@@ -68,6 +69,7 @@ class MailCache {
         flagged INTEGER NOT NULL,
         answered INTEGER NOT NULL,
         has_attachments INTEGER NOT NULL,
+        labels_json TEXT NOT NULL DEFAULT '[]',
         PRIMARY KEY (account_id, path, uid)
       ) STRICT, WITHOUT ROWID;
       -- Indice leggero di TUTTI i messaggi della cartella (anche quelli
@@ -99,12 +101,20 @@ class MailCache {
         if (!keep.contains(path)) _forgetFolder(accountId, path);
       }
       final stmt = _db.prepare('''
-        INSERT INTO folders (account_id, path, name, role) VALUES (?, ?, ?, ?)
+        INSERT INTO folders (account_id, path, name, role, is_label)
+        VALUES (?, ?, ?, ?, ?)
         ON CONFLICT (account_id, path) DO UPDATE SET
-          name = excluded.name, role = excluded.role
+          name = excluded.name, role = excluded.role,
+          is_label = excluded.is_label
       ''');
       for (final f in folders) {
-        stmt.execute([accountId, f.path, f.name, f.role.name]);
+        stmt.execute([
+          accountId,
+          f.path,
+          f.name,
+          f.role.name,
+          if (f.isLabel) 1 else 0,
+        ]);
       }
       stmt.close();
     });
@@ -113,7 +123,7 @@ class MailCache {
   /// The saved folders, already sorted.
   List<Folder> loadFolders(String accountId) {
     final rows = _db.select(
-      'SELECT path, name, role FROM folders WHERE account_id = ?',
+      'SELECT path, name, role, is_label FROM folders WHERE account_id = ?',
       [accountId],
     );
     final folders = [
@@ -122,6 +132,7 @@ class MailCache {
           path: r['path'] as String,
           name: r['name'] as String,
           role: FolderRole.values.byName(r['role'] as String),
+          isLabel: r['is_label'] == 1,
         ),
     ];
     folders.sort((a, b) {
@@ -191,8 +202,9 @@ class MailCache {
       final stmt = _db.prepare('''
         INSERT OR REPLACE INTO messages (
           account_id, path, uid, from_email, from_name, to_json, subject,
-          date_ms, preview, seen, flagged, answered, has_attachments
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          date_ms, preview, seen, flagged, answered, has_attachments,
+          labels_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ''');
       for (final s in summaries) {
         stmt.execute([
@@ -211,6 +223,7 @@ class MailCache {
           s.flagged ? 1 : 0,
           s.answered ? 1 : 0,
           s.hasAttachments ? 1 : 0,
+          jsonEncode(s.labels),
         ]);
       }
       stmt.close();
@@ -284,6 +297,8 @@ class MailCache {
       flagged: r['flagged'] == 1,
       answered: r['answered'] == 1,
       hasAttachments: r['has_attachments'] == 1,
+      labels: (jsonDecode(r['labels_json'] as String) as List<Object?>)
+          .cast<String>(),
     );
   }
 
@@ -345,14 +360,18 @@ class MailCache {
     if (flags.isEmpty) return;
     _transaction(() {
       final stmt = _db.prepare('''
-        UPDATE messages SET seen = ?, flagged = ?, answered = ?
+        UPDATE messages SET seen = ?, flagged = ?, answered = ?,
+          labels_json = COALESCE(?, labels_json)
         WHERE account_id = ? AND path = ? AND uid = ?
       ''');
       for (final MapEntry(key: uid, value: f) in flags.entries) {
+        final labels = f.labels;
         stmt.execute([
           f.seen ? 1 : 0,
           f.flagged ? 1 : 0,
           f.answered ? 1 : 0,
+          // Null: the server has no labels, keep what is saved.
+          labels == null ? null : jsonEncode(labels),
           accountId,
           path,
           uid,

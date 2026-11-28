@@ -16,6 +16,7 @@ This wiki explains **how the app works and why it is built this way**. Start fro
 | [Reading HTML mail](html-mail.md) | The three walls: sanitizer, JavaScript off, no network |
 | [Compose and send](compose-and-send.md) | Reply rules, drafts, the copy in Sent |
 | [Unified Inbox](unified-inbox.md) | Every account's Inbox in one list |
+| [Gmail labels](gmail-labels.md) | How Gmail's labels are read over IMAP and shown |
 | [Features](features.md) | What the app does, where each feature is on phone and desktop, which test covers it |
 | [Platforms](platforms.md) | Windows, macOS, iOS, Android and Linux notes |
 | [Testing](testing.md) | Fakes, what is tested and how |

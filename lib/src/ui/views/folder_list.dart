@@ -91,18 +91,50 @@ class FolderList extends StatelessWidget {
                     const SizedBox(height: 8),
                   ],
                   for (final folder in folders)
-                    _FolderRow(
-                      label: folderLabel(folder),
-                      icon: folderIcon(folder.role),
-                      selected:
-                          !unified &&
-                          folder.path == controller.current.path &&
-                          controller.searchQuery == null,
-                      onPressed: () {
-                        onSelected(folder);
-                        controller.selectFolder(folder);
-                      },
+                    if (!folder.isLabel)
+                      _FolderRow(
+                        label: folderLabel(folder),
+                        icon: folderIcon(folder.role),
+                        selected:
+                            !unified &&
+                            folder.path == controller.current.path &&
+                            controller.searchQuery == null,
+                        onPressed: () {
+                          onSelected(folder);
+                          controller.selectFolder(folder);
+                        },
+                      ),
+                  // Gmail: the user's labels get a section of their own, as
+                  // in Gmail. They are IMAP folders, so opening one works
+                  // like any folder.
+                  if (folders.any((f) => f.isLabel)) ...[
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 16, 12, 4),
+                      child: Semantics(
+                        header: true,
+                        child: Text(
+                          'Etichette',
+                          style: KaamosTypography.captionMd.copyWith(
+                            color: theme.mute,
+                          ),
+                        ),
+                      ),
                     ),
+                    for (final folder in folders)
+                      if (folder.isLabel)
+                        _FolderRow(
+                          label: folder.path,
+                          icon: MailIcon.tag,
+                          selected:
+                              !unified &&
+                              folder.path == controller.current.path &&
+                              controller.searchQuery == null,
+                          onPressed: () {
+                            onSelected(folder);
+                            controller.selectFolder(folder);
+                          },
+                        ),
+                  ],
                 ],
               ),
             ),

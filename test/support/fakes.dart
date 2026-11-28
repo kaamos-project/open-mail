@@ -31,6 +31,7 @@ MessageSummary summary(
   String subject = 'Oggetto',
   bool seen = false,
   String from = 'marta@esempio.org',
+  List<String> labels = const [],
 }) => MessageSummary(
   uid: uid,
   from: Address(from, 'Marta'),
@@ -42,6 +43,7 @@ MessageSummary summary(
   flagged: false,
   answered: false,
   hasAttachments: false,
+  labels: labels,
 );
 
 /// A folder of the fake server.
@@ -100,6 +102,9 @@ class FakeMailService implements MailService {
 
   /// Set by [close].
   bool closed = false;
+
+  /// Behaves like Gmail: messages carry labels (`X-GM-LABELS`).
+  bool gmail = false;
 
   /// Adds [count] messages to [path] with UIDs 1..count.
   void seed(String path, int count) {
@@ -183,6 +188,7 @@ class FakeMailService implements MailService {
             seen: f.messages[u]!.seen,
             flagged: f.messages[u]!.flagged,
             answered: f.messages[u]!.answered,
+            labels: gmail ? f.messages[u]!.labels : null,
           ),
     };
   }
