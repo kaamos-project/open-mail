@@ -20,7 +20,8 @@ This page is the spec: when a feature moves or changes, update the row and its t
 | Feature | Phone | Desktop | Test (`test/ui/`) |
 |---|---|---|---|
 | No keychain: the app explains and offers "Riprova" | Full screen | Full screen | `start_test`: without a keychain |
-| First start: add-account screen, no "Annulla" | One column | Two columns (from 720 px) | `start_test`: first start |
+| First start: the add-account form on the page itself (no card), no "Annulla"; after saving, the mail | One column | Two columns (from 720 px), centred | `start_test`: first start |
+| Adding another account: the same form in a card, with "Annulla" | Full screen | Centred card | `accounts_test`: same address twice |
 | Sign in with Google / Microsoft (disabled without client ID) | Top of the add-account screen | Same | `start_test`: sign-in buttons (a successful sign-in: —) |
 | Manual IMAP and SMTP, checked before saving | Below the sign-in buttons | Same, servers side by side | `accounts_test`: manual account |
 | Servers suggested from the address | Server fields | Same | `accounts_test`: servers suggested |

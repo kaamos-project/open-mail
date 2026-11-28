@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../mail_session_test.dart' show secondAccount;
@@ -90,6 +91,10 @@ void main() {
     await app.pump(tester, layout: layout);
     await openAccountPanel(tester, testAccount.email);
     await tapText(tester, 'Aggiungi account');
+
+    // Over an existing mailbox the form is a card, with "Annulla".
+    expect(find.byKey(const ValueKey('account-setup-card')), findsOneWidget);
+    expect(find.text('Annulla'), findsOneWidget);
 
     await type(tester, field('Indirizzo email'), testAccount.email);
     await type(tester, field('Password'), 'p');
