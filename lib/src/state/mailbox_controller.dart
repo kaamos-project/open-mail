@@ -439,6 +439,23 @@ class MailboxController extends ChangeNotifier {
     );
   }
 
+  /// Removes a Gmail label from a message: at once on screen and in the
+  /// cache, then on the server; back as it was if the server refuses.
+  Future<void> removeLabel(int uid, String label, {String? path}) {
+    final folder = path ?? current.path;
+    return _optimistic(
+      folder,
+      [uid],
+      (m) => m.copyWith(
+        labels: [
+          for (final l in m.labels)
+            if (l != label) l,
+        ],
+      ),
+      (s) => s.storeLabels(folder, [uid], [label], add: false),
+    );
+  }
+
   /// Star on / off.
   Future<void> setFlagged(
     List<int> uids, {

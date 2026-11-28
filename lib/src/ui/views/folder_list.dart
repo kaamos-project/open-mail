@@ -27,7 +27,7 @@ class FolderList extends StatelessWidget {
   const FolderList({
     super.key,
     required this.controller,
-    required this.onCompose,
+    this.onCompose,
     required this.onSelected,
     this.onAccount,
     this.onUnified,
@@ -43,8 +43,9 @@ class FolderList extends StatelessWidget {
   /// The mailbox state.
   final MailboxController controller;
 
-  /// "Scrivi" (compose).
-  final VoidCallback onCompose;
+  /// "Scrivi" (compose). Null hides the button: on the phone, compose is
+  /// the floating button of the list.
+  final VoidCallback? onCompose;
 
   /// Called after choosing a folder (on mobile it closes the page).
   final ValueChanged<Folder> onSelected;
@@ -65,18 +66,32 @@ class FolderList extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-              child: KaamosButton(
-                onPressed: onCompose,
-                leading: MailIconView(
-                  MailIcon.edit,
-                  size: 16,
-                  color: theme.canvas,
+            if (onCompose != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                child: KaamosButton(
+                  onPressed: onCompose,
+                  leading: MailIconView(
+                    MailIcon.edit,
+                    size: 16,
+                    color: theme.canvas,
+                  ),
+                  child: const Text('Scrivi'),
                 ),
-                child: const Text('Scrivi'),
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 20, 16, 12),
+                child: Semantics(
+                  header: true,
+                  child: Text(
+                    'Kaamos Mail',
+                    style: KaamosTypography.headingSm.copyWith(
+                      color: theme.ink,
+                    ),
+                  ),
+                ),
               ),
-            ),
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 8),

@@ -103,8 +103,8 @@ See [Accounts and secrets](accounts-and-security.md) for the keychain check and 
 
 `MailHome` has two layouts, switched at `desktopBreakpoint` (900 px):
 
-- **Desktop**: three columns (folders, list, reader). Compose takes the place of the reader in the side pane instead of a popup.
-- **Mobile**: pages stacked with a `Navigator` (list → message → compose).
+- **Desktop**: three columns (folders, list, reader). Compose is a floating window at the bottom right, in a `Stack` over the columns (see [Compose and send](compose-and-send.md)).
+- **Mobile**: pages stacked with a `Navigator` (list → message → compose). The folders open in a drawer (`showKaamosDrawer`) from the hamburger button, and "Scrivi" is a floating button (`KaamosFab`).
 
 Every widget comes from `kaamos_project_ui`, the Kaamos design system, pinned as a git dependency in `pubspec.yaml`.
 

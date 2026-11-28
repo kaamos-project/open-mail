@@ -79,14 +79,27 @@ class MailIconButton extends StatelessWidget {
 /// and so is [hide] (the label of the folder being shown: every message
 /// there has it).
 class MailLabels extends StatelessWidget {
-  /// Creates the badges for [labels].
-  const MailLabels({super.key, required this.labels, this.hide});
+  /// Creates the chips for [labels].
+  const MailLabels({
+    super.key,
+    required this.labels,
+    this.hide,
+    this.size = KaamosChipSize.small,
+    this.onRemove,
+  });
 
   /// All the message's labels, system ones included.
   final List<String> labels;
 
   /// A label not to show.
   final String? hide;
+
+  /// Small in the list, medium in the open message.
+  final KaamosChipSize size;
+
+  /// Shows an X on each chip that removes the label. Null = no X (the
+  /// list: removing from a row by mistake is too easy).
+  final ValueChanged<String>? onRemove;
 
   /// The labels this widget shows.
   static List<String> visible(List<String> labels, [String? hide]) => [
@@ -98,14 +111,27 @@ class MailLabels extends StatelessWidget {
   Widget build(BuildContext context) {
     final shown = visible(labels, hide);
     if (shown.isEmpty) return const SizedBox.shrink();
+    final remove = onRemove;
+    final chips = Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        for (final l in shown)
+          KaamosChip(
+            l,
+            size: size,
+            onRemove: remove == null ? null : () => remove(l),
+            removeLabel: 'Togli etichetta $l',
+          ),
+      ],
+    );
+    // Without X the chips are read as one sentence; with X every chip and
+    // its X must stay reachable.
+    if (remove != null) return chips;
     return Semantics(
       label: 'Etichette: ${shown.join(', ')}',
       excludeSemantics: true,
-      child: Wrap(
-        spacing: 4,
-        runSpacing: 4,
-        children: [for (final l in shown) KaamosBadge(l)],
-      ),
+      child: chips,
     );
   }
 }

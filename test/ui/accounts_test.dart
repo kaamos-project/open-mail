@@ -1,4 +1,3 @@
-import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../mail_session_test.dart' show secondAccount;
@@ -92,9 +91,14 @@ void main() {
     await openAccountPanel(tester, testAccount.email);
     await tapText(tester, 'Aggiungi account');
 
-    // Over an existing mailbox the form is a card, with "Annulla".
-    expect(find.byKey(const ValueKey('account-setup-card')), findsOneWidget);
+    // Same page as the first start (no card), plus "Annulla".
+    expect(find.text('Aggiungi un account'), findsOneWidget);
     expect(find.text('Annulla'), findsOneWidget);
+    expect(
+      framedAround(find.text('Aggiungi un account')),
+      findsNothing,
+      reason: 'no framed card around the form',
+    );
 
     await type(tester, field('Indirizzo email'), testAccount.email);
     await type(tester, field('Password'), 'p');

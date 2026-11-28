@@ -69,6 +69,35 @@ String decodeModifiedUtf7(String text) {
   });
 }
 
+/// Encodes text in IMAP's "modified UTF-7" (RFC 3501, 5.1.3): the
+/// opposite of [decodeModifiedUtf7]. Printable ASCII stays as is, `&`
+/// becomes `&-`, anything else goes in `&…-` as base64 of UTF-16
+/// big-endian, with `,` instead of `/` and no padding.
+String encodeModifiedUtf7(String text) {
+  final out = StringBuffer();
+  final pending = <int>[];
+  void flush() {
+    if (pending.isEmpty) return;
+    final bytes = [
+      for (final u in pending) ...[u >> 8, u & 0xFF],
+    ];
+    final b64 = base64.encode(bytes).replaceAll('=', '').replaceAll('/', ',');
+    out.write('&$b64-');
+    pending.clear();
+  }
+
+  for (final unit in text.codeUnits) {
+    if (unit >= 0x20 && unit <= 0x7E) {
+      flush();
+      out.write(unit == 0x26 ? '&-' : String.fromCharCode(unit));
+    } else {
+      pending.add(unit);
+    }
+  }
+  flush();
+  return out.toString();
+}
+
 /// The labels to show: Gmail's system labels start with `\` (`\Inbox`,
 /// `\Important`, `\Sent`…) and have their own folders or icons.
 List<String> userLabels(List<String> labels) => [

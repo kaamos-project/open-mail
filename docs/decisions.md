@@ -61,6 +61,12 @@ The key choices behind Kaamos Mail, each with the alternatives and the trade-off
 **Decision**: plain-text compose only; HTML compose maybe much later.
 **Why**: simpler, safer and smaller messages.
 
+## Desktop compose in a floating window
+
+**Decision** (November 2026, replacing "compose in the side pane"): on desktop, compose is a window at the bottom right over the columns, like Gmail's, with minimize and expand. One window at a time.
+**Why**: you can keep reading other messages, or copy from them, while writing.
+**Trade-off**: one window covers most uses with half the state to manage. Several side-by-side windows can come later without rework, because the window's state (`ComposeWindowControls`) is already outside `ComposeView`.
+
 ## Gmail and Outlook over IMAP + OAuth2
 
 **Decision**: XOAUTH2 over IMAP/SMTP with PKCE and a loopback redirect, like Thunderbird and Apple Mail. No Gmail API, no Microsoft Graph.

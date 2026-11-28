@@ -12,11 +12,16 @@ Future<void> openFolders(WidgetTester tester, Layout layout) async {
 
 /// The list that shows [text], resolved now: rows leave the tree as it
 /// scrolls, so a lazy ancestor finder would stop matching.
-Finder listAround(WidgetTester tester, String text) => find.byWidget(
-  tester.widget<Scrollable>(
+Finder listAround(WidgetTester tester, String text) {
+  // Resolved now, by its State: the text may scroll away, and the
+  // Scrollable widget may be rebuilt, but its State stays the same.
+  final state = tester.state<ScrollableState>(
     find.ancestor(of: find.text(text), matching: find.byType(Scrollable)).first,
-  ),
-);
+  );
+  return find.byElementPredicate(
+    (e) => e is StatefulElement && e.state == state,
+  );
+}
 
 void main() {
   testBothLayouts('the folder list opens another folder', (

@@ -32,6 +32,27 @@ void testBothLayouts(
   }
 }
 
+/// A bordered box around [finder]: the "card" look that reads as a pop-up.
+Finder framedAround(Finder finder) => find.ancestor(
+  of: finder,
+  matching: find.byWidgetPredicate(
+    (w) =>
+        w is DecoratedBox &&
+        w.decoration is BoxDecoration &&
+        (w.decoration as BoxDecoration).border != null,
+  ),
+);
+
+/// Runs [body] in one [Layout] only, for what exists in one of them (the
+/// phone's drawer, the desktop compose window).
+void testLayout(
+  Layout layout,
+  String description,
+  Future<void> Function(WidgetTester tester) body,
+) {
+  testWidgets('$description [${layout.name}]', body);
+}
+
 /// The whole app on fakes: an in-memory server, cache, keychain and files.
 class AppHarness {
   /// Creates the harness. The Inbox starts with messages 1..[inbox];

@@ -294,7 +294,12 @@ class _MessageBodyState extends State<_MessageBody> {
           ),
           if (MailLabels.visible(labels, path).isNotEmpty) ...[
             const SizedBox(height: 8),
-            MailLabels(labels: labels, hide: path),
+            MailLabels(
+              labels: labels,
+              hide: path,
+              size: KaamosChipSize.medium,
+              onRemove: (label) => c.removeLabel(s.uid, label, path: path),
+            ),
           ],
           const SizedBox(height: 16),
           Row(
@@ -357,6 +362,23 @@ class _MessageBodyState extends State<_MessageBody> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         MailSelectable(child: header),
+        // On the phone the list (and its error banner) is hidden under this
+        // page: a failed action on the message (star, label…) says so here.
+        // On desktop the list beside it already shows the banner.
+        if (widget.onBack != null && c.error != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+            child: MailBanner(
+              icon: MailIcon.shield,
+              danger: true,
+              message: c.error!,
+              action: KaamosButton(
+                variant: KaamosButtonVariant.install,
+                onPressed: c.dismissError,
+                child: const Text('Chiudi'),
+              ),
+            ),
+          ),
         if (sanitized != null && sanitized.blockedRemote > 0 && !_allowRemote)
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),

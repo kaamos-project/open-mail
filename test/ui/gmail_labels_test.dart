@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kaamos_mail/src/core/mail_errors.dart';
 import 'package:kaamos_mail/src/core/models.dart';
 import 'package:kaamos_mail/src/ui/views/folder_list.dart';
 
@@ -46,11 +47,56 @@ void main() {
     expect(find.textContaining('Inbox'), findsNothing, reason: 'system label');
     expect(find.textContaining('Important'), findsNothing);
 
+    // No X on the rows: removing by mistake from the list is too easy.
+    expect(find.bySemanticsLabel(RegExp('^Togli etichetta')), findsNothing);
+
     await tapText(tester, 'Oggetto 5');
+    // In the message each label has its X.
+    expect(find.bySemanticsLabel('Togli etichetta Lavoro'), findsOneWidget);
     expect(
-      find.bySemanticsLabel('Etichette: Lavoro, Viaggi/Norvegia'),
-      findsWidgets,
+      find.bySemanticsLabel('Togli etichetta Viaggi/Norvegia'),
+      findsOneWidget,
     );
+  });
+
+  testBothLayouts('the X in the message removes the label', (
+    tester,
+    layout,
+  ) async {
+    final app = gmail();
+    await app.addAccount();
+    await app.pump(tester, layout: layout);
+    await tapText(tester, 'Oggetto 5');
+
+    await tapLabel(tester, 'Togli etichetta Lavoro');
+    expect(find.bySemanticsLabel('Togli etichetta Lavoro'), findsNothing);
+    expect(app.server.folders['INBOX']!.messages[5]!.labels, [
+      r'\Inbox',
+      r'\Important',
+      'Viaggi/Norvegia',
+    ], reason: 'only that label, system labels stay');
+    expect(
+      app.cache.loadSummaries(testAccount.id, 'INBOX').first.labels,
+      isNot(contains('Lavoro')),
+    );
+  });
+
+  testBothLayouts('if the server refuses, the label comes back', (
+    tester,
+    layout,
+  ) async {
+    final app = gmail();
+    await app.addAccount();
+    await app.pump(tester, layout: layout);
+    await tapText(tester, 'Oggetto 5');
+
+    app.server.failWith = const MailFailure(
+      MailFailureKind.server,
+      'Il server ha risposto: NO',
+    );
+    await tapLabel(tester, 'Togli etichetta Lavoro');
+    expect(find.bySemanticsLabel('Togli etichetta Lavoro'), findsOneWidget);
+    expect(find.textContaining('Il server ha risposto: NO'), findsWidgets);
   });
 
   testBothLayouts('labels have their own section, and open like folders', (
