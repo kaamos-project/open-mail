@@ -32,7 +32,12 @@ class FolderList extends StatelessWidget {
     this.onAccount,
     this.onUnified,
     this.unified = false,
+    this.onSettings,
   });
+
+  /// Opens the settings: a gear next to the account on desktop, a row at
+  /// the bottom of the phone's drawer. Null hides it.
+  final VoidCallback? onSettings;
 
   /// "Tutte le caselle" (all inboxes). `null` with a single account.
   final VoidCallback? onUnified;
@@ -154,54 +159,81 @@ class FolderList extends StatelessWidget {
               ),
             if (onAccount != null) ...[
               const Hairline(),
-              KaamosPressable(
-                onPressed: onAccount,
-                semanticLabel: 'Account ${controller.account.email}',
-                builder: (context, states) => KaamosFocusRing(
-                  visible: states.contains(WidgetState.focused),
-                  color: theme.focusRing,
-                  borderRadius: KaamosRadius.md,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        MailAvatar(
-                          label: controller.account.displayName,
-                          size: 32,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                controller.account.displayName,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: KaamosTypography.bodySmStrong.copyWith(
-                                  color: theme.ink,
-                                ),
-                              ),
-                              Text(
-                                controller.account.email,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: KaamosTypography.captionSm.copyWith(
-                                  color: theme.mute,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+              Row(
+                children: [
+                  Expanded(child: _account(theme)),
+                  if (onSettings != null) ...[
+                    MailIconButton(
+                      icon: MailIcon.settings,
+                      label: 'Impostazioni',
+                      onPressed: onSettings,
                     ),
-                  ),
+                    const SizedBox(width: 12),
+                  ],
+                ],
+              ),
+            ] else if (onSettings != null) ...[
+              // The phone's drawer has no account row (the account is the
+              // avatar next to the search bar): settings get a row instead.
+              const Hairline(),
+              Padding(
+                padding: const EdgeInsets.all(8),
+                child: _FolderRow(
+                  label: 'Impostazioni',
+                  icon: MailIcon.settings,
+                  selected: false,
+                  onPressed: onSettings!,
                 ),
               ),
             ],
           ],
         );
       },
+    );
+  }
+
+  /// The account row: avatar, name and address. It opens the account panel.
+  Widget _account(KaamosThemeData theme) {
+    return KaamosPressable(
+      onPressed: onAccount,
+      semanticLabel: 'Account ${controller.account.email}',
+      builder: (context, states) => KaamosFocusRing(
+        visible: states.contains(WidgetState.focused),
+        color: theme.focusRing,
+        borderRadius: KaamosRadius.md,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              MailAvatar(label: controller.account.displayName, size: 32),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      controller.account.displayName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: KaamosTypography.bodySmStrong.copyWith(
+                        color: theme.ink,
+                      ),
+                    ),
+                    Text(
+                      controller.account.email,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: KaamosTypography.captionSm.copyWith(
+                        color: theme.mute,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

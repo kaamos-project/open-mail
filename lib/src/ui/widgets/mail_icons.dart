@@ -79,6 +79,9 @@ enum MailIcon {
 
   /// X: closes.
   close,
+
+  /// Gear: the app's settings.
+  settings,
 }
 
 /// Draws a [MailIcon].
@@ -347,6 +350,19 @@ class _MailIconPainter extends CustomPainter {
       case MailIcon.close:
         line(6, 6, 18, 18);
         line(18, 6, 6, 18);
+      case MailIcon.settings:
+        // A ring with eight teeth around a hub.
+        canvas.drawCircle(const Offset(12, 12), 6.5, stroke);
+        canvas.drawCircle(const Offset(12, 12), 2.5, stroke);
+        for (var i = 0; i < 8; i++) {
+          final a = i * math.pi / 4;
+          line(
+            12 + 6.5 * math.cos(a),
+            12 + 6.5 * math.sin(a),
+            12 + 9.5 * math.cos(a),
+            12 + 9.5 * math.sin(a),
+          );
+        }
     }
   }
 

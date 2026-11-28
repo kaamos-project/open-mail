@@ -10,10 +10,11 @@ This page is the spec: when a feature moves or changes, update the row and its t
 
 | | Phone | Desktop |
 |---|---|---|
-| Structure | One page at a time: list → message → compose | Three columns: folders (240 px), list (340 px, 400 px from 1200 px), reader |
+| Structure | One page at a time: list → message → compose | Three columns: folders (240 px), list (340 px, 400 px from 1200 px), reader. Or "Solo lista": list or message in the whole area ([Settings](settings.md)) |
 | Folders | Hamburger button ("Cartelle") opens a drawer from the left: 85% of the screen, at most 320 px, over the dimmed list | Always visible on the left |
 | Account | Avatar at the right of the search bar (of the title in "Tutte le caselle"), like Google's apps | Row at the bottom of the folders column, always visible |
-| Compose | Its own page, from the floating "Scrivi" button | A window at the bottom right over the columns, like Gmail: minimize, expand, close; one at a time |
+| Compose | Its own page, from the floating "Scrivi" button | A window at the bottom right over the columns, like Gmail: minimize, expand, close; one at a time. Or a page in place of list and reader, in [Settings](settings.md) |
+| Settings | "Impostazioni" row at the bottom of the drawer | Gear to the right of the account row |
 
 ## Start and accounts
 
@@ -85,7 +86,17 @@ Only for servers that announce `X-GM-EXT-1` (Gmail): see [Gmail labels](gmail-la
 | Send | Toolbar | Bottom of the window, next to Attach | `compose_test`: new message, reply |
 | Close: empty closes at once; with text asks (delete, keep writing, save to Drafts) | Dialog | Same | `compose_test`: closing with text, empty message |
 
+## Settings
+
+| Feature | Phone | Desktop | Test (`test/ui/`) |
+|---|---|---|---|
+| Settings page, full page with "Indietro"; choices saved at once | From the drawer | From the gear next to the account | `settings_test`: settings open, save the choice |
+| "Carica sempre": remote images load with no banner | Same | Same | `settings_test`: "Carica sempre" |
+| "Solo lista": the open message takes the whole area, "Indietro" brings the list back where it was | — | Area right of the folders | `settings_test`: "Solo lista", switching layout |
+| Compose "Pagina": compose in place of list and reader, "Chiudi" goes back | — | Area right of the folders | `settings_test`: "Pagina" |
+
 ## See also
 
+- [Settings](settings.md)
 - [Testing](testing.md)
 - [Architecture](architecture.md)

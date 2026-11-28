@@ -7,6 +7,7 @@ import 'data/mail_cache.dart';
 import 'data/oauth_client.dart';
 import 'data/secret_store.dart';
 import 'state/mail_session.dart';
+import 'state/settings_controller.dart';
 import 'ui/environment.dart';
 import 'ui/screens/account_setup.dart';
 import 'ui/screens/keychain_missing.dart';
@@ -25,6 +26,7 @@ class KaamosMailApp extends StatelessWidget {
     required this.services,
     required this.files,
     required this.htmlBody,
+    required this.settings,
     this.oauth,
   });
 
@@ -46,6 +48,9 @@ class KaamosMailApp extends StatelessWidget {
   /// HTML body.
   final HtmlBodyBuilder htmlBody;
 
+  /// The app's settings (loaded during startup).
+  final SettingsController settings;
+
   /// Google and Microsoft sign-in, where available.
   final OAuthSignIn? oauth;
 
@@ -58,6 +63,7 @@ class KaamosMailApp extends StatelessWidget {
       services: services,
       files: files,
       htmlBody: htmlBody,
+      settings: settings,
       oauth: oauth,
       child: const KaamosApp(
         title: 'Kaamos Mail',
@@ -115,7 +121,7 @@ class _RootState extends State<_Root> {
           cache: env.cache,
           services: env.services,
         );
-    await session.load();
+    await Future.wait([session.load(), env.settings.load()]);
     if (!mounted) {
       session.dispose();
       return;

@@ -8,6 +8,7 @@ import '../data/account_repository.dart';
 import '../data/mail_cache.dart';
 import '../data/oauth_client.dart';
 import '../data/secret_store.dart';
+import '../state/settings_controller.dart';
 
 /// Draws the (already cleaned) HTML body of a message.
 ///
@@ -47,6 +48,7 @@ class MailEnvironment extends InheritedWidget {
     required this.services,
     required this.files,
     required this.htmlBody,
+    required this.settings,
     required super.child,
     this.oauth,
   });
@@ -69,6 +71,9 @@ class MailEnvironment extends InheritedWidget {
   /// Draws HTML mail.
   final HtmlBodyBuilder htmlBody;
 
+  /// The app's settings. Widgets that depend on them listen to it.
+  final SettingsController settings;
+
   /// Sign-in with Google and Microsoft, `null` where it isn't available
   /// yet (iOS and Android for now).
   final OAuthSignIn? oauth;
@@ -86,5 +91,6 @@ class MailEnvironment extends InheritedWidget {
       cache != old.cache ||
       services != old.services ||
       htmlBody != old.htmlBody ||
-      oauth != old.oauth;
+      oauth != old.oauth ||
+      settings != old.settings;
 }

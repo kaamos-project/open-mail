@@ -6,6 +6,7 @@ import 'package:kaamos_project_ui/kaamos_project_ui.dart';
 import '../../core/html_sanitizer.dart';
 import '../../core/mail_errors.dart';
 import '../../core/models.dart';
+import '../../core/settings.dart';
 import '../../core/text_utils.dart';
 import '../../state/compose_draft.dart';
 import '../../state/mailbox_controller.dart';
@@ -136,6 +137,10 @@ class _MessageBodyState extends State<_MessageBody> {
   @override
   void initState() {
     super.initState();
+    // "Carica sempre" in the settings skips the banner. Read once: a change
+    // of setting applies from the next message opened.
+    final env = context.getInheritedWidgetOfExactType<MailEnvironment>();
+    _allowRemote = env?.settings.value.remoteImages == RemoteImages.always;
     _sanitize();
   }
 
