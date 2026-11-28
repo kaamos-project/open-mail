@@ -47,7 +47,7 @@ class MessageView extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                MailIconView(MailIcon.mail, size: 32, color: theme.mute),
+                KaamosIcon(KaamosIcons.mail, size: 32, color: theme.mute),
                 const SizedBox(height: 12),
                 Text(
                   'Scegli un messaggio da leggere',
@@ -100,7 +100,7 @@ class _BackBar extends StatelessWidget {
     child: Row(
       children: [
         MailIconButton(
-          icon: MailIcon.back,
+          icon: const KaamosIcon(KaamosIcons.chevronLeft),
           label: 'Indietro',
           onPressed: onBack,
           size: 44,
@@ -214,14 +214,14 @@ class _MessageBodyState extends State<_MessageBody> {
       runSpacing: 4,
       children: [
         MailIconButton(
-          icon: MailIcon.reply,
+          icon: const KaamosIcon(KaamosIcons.reply),
           label: 'Rispondi',
           onPressed: () =>
               widget.onCompose(ComposeDraft.reply(m, me: me, path: path)),
         ),
         if (s.to.length + m.cc.length > 1)
           MailIconButton(
-            icon: MailIcon.reply,
+            icon: const KaamosIcon(KaamosIcons.reply),
             label: 'Rispondi a tutti',
             iconColor: theme.accent,
             onPressed: () => widget.onCompose(
@@ -229,18 +229,20 @@ class _MessageBodyState extends State<_MessageBody> {
             ),
           ),
         MailIconButton(
-          icon: MailIcon.forward,
+          icon: const KaamosIcon(KaamosIcons.forward),
           label: 'Inoltra',
           onPressed: () => widget.onCompose(ComposeDraft.forward(m)),
         ),
         MailIconButton(
-          icon: flagged ? MailIcon.starFilled : MailIcon.star,
+          icon: flagged
+              ? const FilledStarIcon()
+              : const KaamosIcon(KaamosIcons.star),
           label: flagged ? 'Togli la stella' : 'Metti la stella',
           iconColor: flagged ? theme.accent : null,
           onPressed: () => c.setFlagged([s.uid], flagged: !flagged, path: path),
         ),
         MailIconButton(
-          icon: MailIcon.mail,
+          icon: const KaamosIcon(KaamosIcons.mail),
           label: 'Segna come non letto',
           onPressed: () {
             c.setSeen([s.uid], seen: false, path: path);
@@ -250,7 +252,7 @@ class _MessageBodyState extends State<_MessageBody> {
         ),
         if (archive != null && !inArchive)
           MailIconButton(
-            icon: MailIcon.archive,
+            icon: const KaamosIcon(KaamosIcons.archive),
             label: 'Archivia',
             onPressed: () {
               c.archive([s.uid], path: path);
@@ -258,7 +260,7 @@ class _MessageBodyState extends State<_MessageBody> {
             },
           ),
         MailIconButton(
-          icon: MailIcon.trash,
+          icon: const KaamosIcon(KaamosIcons.trash),
           label: folder.role == FolderRole.trash
               ? 'Elimina definitivamente'
               : 'Sposta nel cestino',
@@ -279,7 +281,7 @@ class _MessageBodyState extends State<_MessageBody> {
             children: [
               if (widget.onBack != null) ...[
                 MailIconButton(
-                  icon: MailIcon.back,
+                  icon: const KaamosIcon(KaamosIcons.chevronLeft),
                   label: 'Indietro',
                   onPressed: widget.onBack,
                   size: 44,
@@ -380,7 +382,7 @@ class _MessageBodyState extends State<_MessageBody> {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
             child: MailBanner(
-              icon: MailIcon.shield,
+              icon: KaamosIcons.shield,
               danger: true,
               message: c.error!,
               action: KaamosButton(
@@ -394,7 +396,7 @@ class _MessageBodyState extends State<_MessageBody> {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
             child: MailBanner(
-              icon: MailIcon.shield,
+              icon: KaamosIcons.shield,
               message:
                   'Ho bloccato ${sanitized.blockedRemote} immagini remote: '
                   'chi le manda saprebbe quando e da dove leggi.',
@@ -427,7 +429,7 @@ class _MessageBodyState extends State<_MessageBody> {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
             child: MailBanner(
-              icon: MailIcon.paperclip,
+              icon: KaamosIcons.paperclip,
               danger: true,
               message: _attachmentError!,
             ),
@@ -476,7 +478,7 @@ class _AttachmentChip extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              MailIconView(MailIcon.paperclip, size: 16, color: theme.mute),
+              KaamosIcon(KaamosIcons.paperclip, size: 16, color: theme.mute),
               const SizedBox(width: 8),
               Flexible(
                 child: Text(

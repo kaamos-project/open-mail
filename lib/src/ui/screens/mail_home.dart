@@ -13,7 +13,6 @@ import '../views/folder_list.dart';
 import '../views/message_list.dart';
 import '../views/message_view.dart';
 import '../widgets/common.dart';
-import '../widgets/mail_icons.dart';
 import 'settings_screen.dart';
 
 /// From this width up: three columns (desktop). Below: pages stacked on each
@@ -619,7 +618,7 @@ class _MailHomeState extends State<MailHome> {
                   onPressed: () => _showAccount(context),
                 ),
                 leading: MailIconButton(
-                  icon: MailIcon.menu,
+                  icon: const KaamosIcon(KaamosIcons.menu),
                   label: 'Cartelle',
                   size: 44,
                   onPressed: () => _showFolders(context),
@@ -634,7 +633,7 @@ class _MailHomeState extends State<MailHome> {
               valueListenable: _fabExtended,
               builder: (context, extended, _) => KaamosFab(
                 onPressed: () => _compose(context, const ComposeDraft(), false),
-                icon: const MailIconView(MailIcon.edit),
+                icon: const KaamosIcon(KaamosIcons.pencilLine),
                 label: 'Scrivi',
                 extended: extended,
               ),

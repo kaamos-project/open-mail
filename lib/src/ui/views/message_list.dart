@@ -90,7 +90,7 @@ class _MessageListState extends State<MessageList> {
                     ),
                   ),
                   MailIconButton(
-                    icon: MailIcon.refresh,
+                    icon: const KaamosIcon(KaamosIcons.refreshCw),
                     label: c.syncing ? 'Aggiornamento in corso' : 'Aggiorna',
                     onPressed: c.syncing ? null : () => c.refresh(),
                   ),
@@ -123,7 +123,7 @@ class _MessageListState extends State<MessageList> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                 child: MailBanner(
-                  icon: MailIcon.shield,
+                  icon: KaamosIcons.shield,
                   danger: true,
                   message: c.error!,
                   action: KaamosButton(
@@ -313,19 +313,15 @@ class MessageRow extends StatelessWidget {
                               ),
                             ),
                             if (m.hasAttachments) ...[
-                              MailIconView(
-                                MailIcon.paperclip,
+                              KaamosIcon(
+                                KaamosIcons.paperclip,
                                 size: 14,
                                 color: theme.mute,
                               ),
                               const SizedBox(width: 6),
                             ],
                             if (m.flagged) ...[
-                              MailIconView(
-                                MailIcon.starFilled,
-                                size: 14,
-                                color: theme.accent,
-                              ),
+                              FilledStarIcon(size: 14, color: theme.accent),
                               const SizedBox(width: 6),
                             ],
                             Text(
@@ -493,11 +489,11 @@ extension on MessageRow {
             const SizedBox(width: 12),
           ],
           if (m.hasAttachments) ...[
-            MailIconView(MailIcon.paperclip, size: 14, color: theme.mute),
+            KaamosIcon(KaamosIcons.paperclip, size: 14, color: theme.mute),
             const SizedBox(width: 6),
           ],
           if (m.flagged) ...[
-            MailIconView(MailIcon.starFilled, size: 14, color: theme.accent),
+            FilledStarIcon(size: 14, color: theme.accent),
             const SizedBox(width: 6),
           ],
           Text(
@@ -575,7 +571,7 @@ class UnifiedMessageList extends StatelessWidget {
                     ),
                   ),
                   MailIconButton(
-                    icon: MailIcon.refresh,
+                    icon: const KaamosIcon(KaamosIcons.refreshCw),
                     label: inbox.syncing
                         ? 'Aggiornamento in corso'
                         : 'Aggiorna',
@@ -592,7 +588,7 @@ class UnifiedMessageList extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                 child: MailBanner(
-                  icon: MailIcon.shield,
+                  icon: KaamosIcons.shield,
                   danger: true,
                   message: error,
                   action: KaamosButton(

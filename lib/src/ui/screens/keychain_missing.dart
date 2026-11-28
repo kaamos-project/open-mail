@@ -1,7 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:kaamos_project_ui/kaamos_project_ui.dart';
 
-import '../widgets/mail_icons.dart';
 
 /// Shown when the system keychain doesn't work (usually Linux without GNOME
 /// Keyring or KWallet). The app doesn't start: storing passwords in plain text
@@ -26,7 +25,7 @@ class KeychainMissingScreen extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                MailIconView(MailIcon.lock, size: 28, color: theme.ink),
+                KaamosIcon(KaamosIcons.lock, size: 28, color: theme.ink),
                 const SizedBox(height: 16),
                 Semantics(
                   header: true,

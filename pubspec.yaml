@@ -16,7 +16,7 @@ dependencies:
   kaamos_project_ui:
     git:
       url: https://github.com/kaamos-project/open-ui-flutter
-      ref: 2ceb44bc5426cc9dca1e04bc8aa87bbb9b56c64f
+      ref: 2252171aa8f30f2f8ebbe7d953e346d5b13af871
   enough_mail: ^3.0.0
   sqlite3: ^3.9.2
   flutter_secure_storage: ^11.2.0

@@ -5,17 +5,16 @@ import '../../core/models.dart';
 import '../../core/text_utils.dart';
 import '../../state/mailbox_controller.dart';
 import '../widgets/common.dart';
-import '../widgets/mail_icons.dart';
 
 /// A folder's icon based on its role.
-MailIcon folderIcon(FolderRole role) => switch (role) {
-  FolderRole.inbox => MailIcon.inbox,
-  FolderRole.sent => MailIcon.send,
-  FolderRole.drafts => MailIcon.file,
-  FolderRole.archive => MailIcon.archive,
-  FolderRole.trash => MailIcon.trash,
-  FolderRole.junk => MailIcon.junk,
-  FolderRole.other => MailIcon.folder,
+IconData folderIcon(FolderRole role) => switch (role) {
+  FolderRole.inbox => KaamosIcons.inbox,
+  FolderRole.sent => KaamosIcons.send,
+  FolderRole.drafts => KaamosIcons.file,
+  FolderRole.archive => KaamosIcons.archive,
+  FolderRole.trash => KaamosIcons.trash,
+  FolderRole.junk => KaamosIcons.ban,
+  FolderRole.other => KaamosIcons.folder,
 };
 
 /// The folder column: "Scrivi" (compose) button, folders, account at the
@@ -89,7 +88,7 @@ class FolderList extends StatelessWidget {
                   if (onUnified != null) ...[
                     _FolderRow(
                       label: 'Tutte le caselle',
-                      icon: MailIcon.inbox,
+                      icon: KaamosIcons.inbox,
                       selected: unified,
                       onPressed: onUnified!,
                     ),
@@ -129,7 +128,7 @@ class FolderList extends StatelessWidget {
                       if (folder.isLabel)
                         _FolderRow(
                           label: folder.path,
-                          icon: MailIcon.tag,
+                          icon: KaamosIcons.tag,
                           selected:
                               !unified &&
                               folder.path == controller.current.path &&
@@ -149,8 +148,8 @@ class FolderList extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                 child: KaamosButton(
                   onPressed: onCompose,
-                  leading: MailIconView(
-                    MailIcon.edit,
+                  leading: KaamosIcon(
+                    KaamosIcons.pencilLine,
                     size: 16,
                     color: theme.canvas,
                   ),
@@ -164,7 +163,7 @@ class FolderList extends StatelessWidget {
                   Expanded(child: _account(theme)),
                   if (onSettings != null) ...[
                     MailIconButton(
-                      icon: MailIcon.settings,
+                      icon: const KaamosIcon(KaamosIcons.settings),
                       label: 'Impostazioni',
                       onPressed: onSettings,
                     ),
@@ -180,7 +179,7 @@ class FolderList extends StatelessWidget {
                 padding: const EdgeInsets.all(8),
                 child: _FolderRow(
                   label: 'Impostazioni',
-                  icon: MailIcon.settings,
+                  icon: KaamosIcons.settings,
                   selected: false,
                   onPressed: onSettings!,
                 ),
@@ -247,7 +246,7 @@ class _FolderRow extends StatelessWidget {
   });
 
   final String label;
-  final MailIcon icon;
+  final IconData icon;
   final bool selected;
   final VoidCallback onPressed;
 
@@ -276,7 +275,7 @@ class _FolderRow extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  MailIconView(
+                  KaamosIcon(
                     icon,
                     size: 18,
                     color: selected ? theme.ink : theme.mute,

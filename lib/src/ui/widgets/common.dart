@@ -2,7 +2,6 @@ import 'package:flutter/widgets.dart';
 import 'package:kaamos_project_ui/kaamos_project_ui.dart';
 
 import '../../core/text_utils.dart';
-import 'mail_icons.dart';
 
 /// Square icon-only button (36px, 44px on touch).
 class MailIconButton extends StatelessWidget {
@@ -18,8 +17,9 @@ class MailIconButton extends StatelessWidget {
     this.iconColor,
   });
 
-  /// The icon.
-  final MailIcon icon;
+  /// The icon, usually a `KaamosIcon`. The button sets its size (18) and
+  /// colour through [IconTheme].
+  final Widget icon;
 
   /// Name of the action.
   final String label;
@@ -61,12 +61,14 @@ class MailIconButton extends StatelessWidget {
               ),
             ),
             alignment: Alignment.center,
-            child: MailIconView(
-              icon,
-              size: 18,
-              color: disabled
-                  ? theme.disabledForeground
-                  : iconColor ?? (filled ? theme.onDark : theme.body),
+            child: IconTheme(
+              data: IconThemeData(
+                size: 18,
+                color: disabled
+                    ? theme.disabledForeground
+                    : iconColor ?? (filled ? theme.onDark : theme.body),
+              ),
+              child: icon,
             ),
           ),
         );
@@ -199,7 +201,7 @@ class MailBanner extends StatelessWidget {
   });
 
   /// Icon on the left.
-  final MailIcon icon;
+  final IconData icon;
 
   /// Text.
   final String message;
@@ -232,7 +234,7 @@ class MailBanner extends StatelessWidget {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                MailIconView(
+                KaamosIcon(
                   icon,
                   size: 18,
                   color: danger ? theme.danger : theme.accent,

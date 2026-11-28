@@ -4,7 +4,6 @@ import 'package:kaamos_project_ui/kaamos_project_ui.dart';
 import '../../core/settings.dart';
 import '../../state/settings_controller.dart';
 import '../widgets/common.dart';
-import '../widgets/mail_icons.dart';
 
 /// The app's settings: one page, the same on the phone and on desktop,
 /// centred and without a card (like the add-account page).
@@ -40,7 +39,7 @@ class SettingsScreen extends StatelessWidget {
               child: Row(
                 children: [
                   MailIconButton(
-                    icon: MailIcon.back,
+                    icon: const KaamosIcon(KaamosIcons.chevronLeft),
                     label: 'Indietro',
                     size: 44,
                     onPressed: onBack,
