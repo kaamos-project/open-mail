@@ -453,24 +453,34 @@ class _MailHomeState extends State<MailHome> {
         }),
       ),
     );
-    final window = DecoratedBox(
+    const radius = BorderRadius.all(Radius.circular(12));
+    // The border is a *foreground* decoration: it is painted over the
+    // content, so the title bar's background can't cover it, and it
+    // follows exactly the same rounded shape the content is clipped to.
+    // (Before, the border was painted behind the content: the title bar
+    // hid it at the top, and the clip's corners didn't match it.)
+    final window = Container(
       key: const ValueKey('compose-window'),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: theme.canvas,
-        border: Border.all(color: theme.hairlineStrong),
-        borderRadius: const BorderRadius.all(Radius.circular(12)),
+        borderRadius: radius,
+        // A short, tight shadow: it separates the window from a light
+        // mail in the reader. A wide blur on the dark canvas looked like
+        // a grey halo around the window.
         boxShadow: const [
           BoxShadow(
-            color: Color(0x80000000),
-            blurRadius: 24,
-            offset: Offset(0, 8),
+            color: Color(0x40000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: const BorderRadius.all(Radius.circular(12)),
-        child: view,
+      foregroundDecoration: BoxDecoration(
+        border: Border.all(color: theme.hairlineStrong),
+        borderRadius: radius,
       ),
+      child: view,
     );
     if (_expanded) {
       return Positioned(
