@@ -29,7 +29,7 @@ class FolderList extends StatelessWidget {
     required this.controller,
     required this.onCompose,
     required this.onSelected,
-    required this.onAccount,
+    this.onAccount,
     this.onUnified,
     this.unified = false,
   });
@@ -49,8 +49,9 @@ class FolderList extends StatelessWidget {
   /// Called after choosing a folder (on mobile it closes the page).
   final ValueChanged<Folder> onSelected;
 
-  /// Opens the account settings.
-  final VoidCallback onAccount;
+  /// Opens the account panel. Null hides the account row: on the phone the
+  /// account is the avatar next to the search bar instead.
+  final VoidCallback? onAccount;
 
   @override
   Widget build(BuildContext context) {
@@ -105,51 +106,53 @@ class FolderList extends StatelessWidget {
                 ],
               ),
             ),
-            const Hairline(),
-            KaamosPressable(
-              onPressed: onAccount,
-              semanticLabel: 'Account ${controller.account.email}',
-              builder: (context, states) => KaamosFocusRing(
-                visible: states.contains(WidgetState.focused),
-                color: theme.focusRing,
-                borderRadius: KaamosRadius.md,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      MailAvatar(
-                        label: controller.account.displayName,
-                        size: 32,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              controller.account.displayName,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: KaamosTypography.bodySmStrong.copyWith(
-                                color: theme.ink,
-                              ),
-                            ),
-                            Text(
-                              controller.account.email,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: KaamosTypography.captionSm.copyWith(
-                                color: theme.mute,
-                              ),
-                            ),
-                          ],
+            if (onAccount != null) ...[
+              const Hairline(),
+              KaamosPressable(
+                onPressed: onAccount,
+                semanticLabel: 'Account ${controller.account.email}',
+                builder: (context, states) => KaamosFocusRing(
+                  visible: states.contains(WidgetState.focused),
+                  color: theme.focusRing,
+                  borderRadius: KaamosRadius.md,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        MailAvatar(
+                          label: controller.account.displayName,
+                          size: 32,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                controller.account.displayName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: KaamosTypography.bodySmStrong.copyWith(
+                                  color: theme.ink,
+                                ),
+                              ),
+                              Text(
+                                controller.account.email,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: KaamosTypography.captionSm.copyWith(
+                                  color: theme.mute,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
+            ],
           ],
         );
       },

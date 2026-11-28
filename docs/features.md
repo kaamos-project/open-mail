@@ -12,6 +12,7 @@ This page is the spec: when a feature moves or changes, update the row and its t
 |---|---|---|
 | Structure | One page at a time: list → message → compose | Three columns: folders (240 px), list (340 px, 400 px from 1200 px), reader |
 | Folders | "Cartelle" button opens them as a page | Always visible on the left |
+| Account | Avatar at the right of the search bar (of the title in "Tutte le caselle"), like Google's apps | Row at the bottom of the folders column, always visible |
 | Compose | Its own page | In the reader column, beside the list |
 
 ## Start and accounts
@@ -19,12 +20,14 @@ This page is the spec: when a feature moves or changes, update the row and its t
 | Feature | Phone | Desktop | Test (`test/ui/`) |
 |---|---|---|---|
 | No keychain: the app explains and offers "Riprova" | Full screen | Full screen | `start_test`: without a keychain |
-| First start: add-account screen, no "Annulla" | One column | Two columns (from 720 px) | `start_test`: first start |
+| First start: the add-account form on the page itself (no card), no "Annulla"; after saving, the mail | One column | Two columns (from 720 px), centred | `start_test`: first start |
+| Adding another account: the same form in a card, with "Annulla" | Full screen | Centred card | `accounts_test`: same address twice |
 | Sign in with Google / Microsoft (disabled without client ID) | Top of the add-account screen | Same | `start_test`: sign-in buttons (a successful sign-in: —) |
 | Manual IMAP and SMTP, checked before saving | Below the sign-in buttons | Same, servers side by side | `accounts_test`: manual account |
 | Servers suggested from the address | Server fields | Same | `accounts_test`: servers suggested |
 | Form errors, one at a time (address, password, servers, ports, duplicate) | Under the form | Same | `accounts_test`: form says what is missing, same address twice |
-| Account panel: switch, add, remove (with confirmation) | Account button at the bottom of the folders page | Account button at the bottom of the folders column | `accounts_test`: switching, removing, same address twice |
+| Account button | Avatar at the right of the search bar; not in the folders page | Row with avatar, name and address at the bottom of the folders column | `accounts_test`: the account button |
+| Account panel (a pop-up): switch, add, remove (with confirmation) | From the avatar | From the row | `accounts_test`: switching, removing, same address twice |
 
 ## Folders and list
 

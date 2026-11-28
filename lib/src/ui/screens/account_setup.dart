@@ -323,141 +323,135 @@ class _AccountSetupScreenState extends State<AccountSetupScreen> {
             error: _result?.smtpError,
           ),
         ];
+        final form = AutofillGroup(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Semantics(
+                header: true,
+                child: Text(
+                  'Aggiungi un account',
+                  style: KaamosTypography.headingXl.copyWith(color: theme.ink),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Kaamos Mail si collega direttamente al tuo provider. '
+                'Nessun server Kaamos vede i tuoi dati.',
+                style: KaamosTypography.bodySm.copyWith(color: theme.mute),
+              ),
+              const SizedBox(height: 20),
+              ?_providerButtons(context),
+              _twoUp(wide, [
+                _Labeled(
+                  label: 'Nome visualizzato',
+                  child: KaamosTextField(
+                    controller: _name,
+                    placeholder: 'Alessio',
+                    autofillHints: const [AutofillHints.name],
+                  ),
+                ),
+                _Labeled(
+                  label: 'Indirizzo email',
+                  child: KaamosTextField(
+                    controller: _email,
+                    placeholder: 'tu@esempio.it',
+                    keyboardType: TextInputType.emailAddress,
+                    autofillHints: const [AutofillHints.email],
+                  ),
+                ),
+              ]),
+              const SizedBox(height: 12),
+              _Labeled(
+                label: 'Password o password per app',
+                child: KaamosTextField(
+                  controller: _password,
+                  obscureText: true,
+                  autofillHints: const [AutofillHints.password],
+                ),
+              ),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  MailIconView(MailIcon.lock, size: 13, color: theme.mute),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Salvata solo nel portachiavi di sistema, mai in un file.',
+                      style: KaamosTypography.captionSm.copyWith(
+                        color: theme.mute,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              _twoUp(wide, servers, gap: 16),
+              if (_formError != null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  _formError!,
+                  style: KaamosTypography.bodySm.copyWith(color: theme.danger),
+                ),
+              ],
+              const SizedBox(height: 20),
+              Wrap(
+                alignment: WrapAlignment.end,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                runSpacing: 12,
+                children: [
+                  if (MailEnvironment.of(context).oauth == null)
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 420),
+                      child: Text(
+                        'Usi Gmail o Outlook? Crea una password per app '
+                        'nelle impostazioni di sicurezza del tuo account.',
+                        style: KaamosTypography.captionSm.copyWith(
+                          color: theme.mute,
+                        ),
+                      ),
+                    ),
+                  if (widget.onCancel != null)
+                    KaamosButton(
+                      variant: KaamosButtonVariant.secondary,
+                      onPressed: _busy ? null : widget.onCancel,
+                      child: const Text('Annulla'),
+                    ),
+                  KaamosButton(
+                    onPressed: _busy ? null : _verifyAndSave,
+                    child: Text(_busy ? 'Verifica…' : 'Verifica e salva'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+        // First start: nothing behind it, so the form sits on the page
+        // itself. Adding another account (from the account panel) keeps the
+        // card, which reads as a step on top of the mail.
+        final framed = widget.onCancel != null;
         return Center(
           child: SingleChildScrollView(
             padding: EdgeInsets.all(wide ? 24 : 16),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 760),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: theme.surface,
-                  border: Border.all(color: theme.hairline),
-                  borderRadius: const BorderRadius.all(
-                    Radius.circular(KaamosRadius.lg),
-                  ),
-                ),
-                child: Padding(
-                  padding: EdgeInsets.all(wide ? 24 : 16),
-                  child: AutofillGroup(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Semantics(
-                          header: true,
-                          child: Text(
-                            'Aggiungi un account',
-                            style: KaamosTypography.headingXl.copyWith(
-                              color: theme.ink,
-                            ),
-                          ),
+              child: framed
+                  ? DecoratedBox(
+                      key: const ValueKey('account-setup-card'),
+                      decoration: BoxDecoration(
+                        color: theme.surface,
+                        border: Border.all(color: theme.hairline),
+                        borderRadius: const BorderRadius.all(
+                          Radius.circular(KaamosRadius.lg),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Kaamos Mail si collega direttamente al tuo provider. '
-                          'Nessun server Kaamos vede i tuoi dati.',
-                          style: KaamosTypography.bodySm.copyWith(
-                            color: theme.mute,
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        ?_providerButtons(context),
-                        _twoUp(wide, [
-                          _Labeled(
-                            label: 'Nome visualizzato',
-                            child: KaamosTextField(
-                              controller: _name,
-                              placeholder: 'Alessio',
-                              autofillHints: const [AutofillHints.name],
-                            ),
-                          ),
-                          _Labeled(
-                            label: 'Indirizzo email',
-                            child: KaamosTextField(
-                              controller: _email,
-                              placeholder: 'tu@esempio.it',
-                              keyboardType: TextInputType.emailAddress,
-                              autofillHints: const [AutofillHints.email],
-                            ),
-                          ),
-                        ]),
-                        const SizedBox(height: 12),
-                        _Labeled(
-                          label: 'Password o password per app',
-                          child: KaamosTextField(
-                            controller: _password,
-                            obscureText: true,
-                            autofillHints: const [AutofillHints.password],
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            MailIconView(
-                              MailIcon.lock,
-                              size: 13,
-                              color: theme.mute,
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                'Salvata solo nel portachiavi di sistema, mai in un file.',
-                                style: KaamosTypography.captionSm.copyWith(
-                                  color: theme.mute,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-                        _twoUp(wide, servers, gap: 16),
-                        if (_formError != null) ...[
-                          const SizedBox(height: 12),
-                          Text(
-                            _formError!,
-                            style: KaamosTypography.bodySm.copyWith(
-                              color: theme.danger,
-                            ),
-                          ),
-                        ],
-                        const SizedBox(height: 20),
-                        Wrap(
-                          alignment: WrapAlignment.end,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          spacing: 8,
-                          runSpacing: 12,
-                          children: [
-                            if (MailEnvironment.of(context).oauth == null)
-                              ConstrainedBox(
-                                constraints: const BoxConstraints(
-                                  maxWidth: 420,
-                                ),
-                                child: Text(
-                                  'Usi Gmail o Outlook? Crea una password per app '
-                                  'nelle impostazioni di sicurezza del tuo account.',
-                                  style: KaamosTypography.captionSm.copyWith(
-                                    color: theme.mute,
-                                  ),
-                                ),
-                              ),
-                            if (widget.onCancel != null)
-                              KaamosButton(
-                                variant: KaamosButtonVariant.secondary,
-                                onPressed: _busy ? null : widget.onCancel,
-                                child: const Text('Annulla'),
-                              ),
-                            KaamosButton(
-                              onPressed: _busy ? null : _verifyAndSave,
-                              child: Text(
-                                _busy ? 'Verifica…' : 'Verifica e salva',
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+                      ),
+                      child: Padding(
+                        padding: EdgeInsets.all(wide ? 24 : 16),
+                        child: form,
+                      ),
+                    )
+                  : form,
             ),
           ),
         );

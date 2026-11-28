@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../mail_session_test.dart' show secondAccount;
@@ -18,10 +19,16 @@ Future<void> saveForm(WidgetTester tester) async {
   await tapText(tester, 'Verifica e salva');
 }
 
-/// The folders, where the account button lives: a page on the phone.
+/// The folders: a page on the phone.
 Future<void> openFolders(WidgetTester tester, Layout layout) async {
   if (layout == Layout.phone) await tapLabel(tester, 'Cartelle');
 }
+
+/// Opens the account panel. On the phone it is the avatar at the right of
+/// the search bar, on desktop the row at the bottom of the folders; both are
+/// labelled "Account <address>".
+Future<void> openAccountPanel(WidgetTester tester, String email) =>
+    tapLabel(tester, 'Account $email');
 
 void main() {
   testBothLayouts('the form says what is missing, one thing at a time', (
@@ -82,9 +89,12 @@ void main() {
     final app = AppHarness();
     await app.addAccount();
     await app.pump(tester, layout: layout);
-    await openFolders(tester, layout);
-    await tapLabel(tester, 'Account ${testAccount.email}');
+    await openAccountPanel(tester, testAccount.email);
     await tapText(tester, 'Aggiungi account');
+
+    // Over an existing mailbox the form is a card, with "Annulla".
+    expect(find.byKey(const ValueKey('account-setup-card')), findsOneWidget);
+    expect(find.text('Annulla'), findsOneWidget);
 
     await type(tester, field('Indirizzo email'), testAccount.email);
     await type(tester, field('Password'), 'p');
@@ -102,12 +112,43 @@ void main() {
     await app.addAccount();
     await app.addAccount(secondAccount);
     await app.pump(tester, layout: layout);
-    await openFolders(tester, layout);
 
-    await tapLabel(tester, 'Account ${testAccount.email}');
+    await openAccountPanel(tester, testAccount.email);
     await tapLabel(tester, 'Lavoro, ${secondAccount.email}');
-    await openFolders(tester, layout);
-    expect(find.text(secondAccount.email), findsWidgets);
+    expect(find.bySemanticsLabel('Account ${secondAccount.email}'), findsOne);
+    expect(find.bySemanticsLabel('Account ${testAccount.email}'), findsNothing);
+  });
+
+  testBothLayouts('the account button: avatar on the phone, row on desktop', (
+    tester,
+    layout,
+  ) async {
+    final app = AppHarness();
+    await app.addAccount();
+    await app.pump(tester, layout: layout);
+
+    final account = find.bySemanticsLabel('Account ${testAccount.email}');
+    if (layout == Layout.phone) {
+      // Right of the search bar, on the same line.
+      final search = tester.getRect(
+        find.bySemanticsLabel('Cerca nella cartella'),
+      );
+      final avatar = tester.getRect(account);
+      expect(avatar.left, greaterThanOrEqualTo(search.right));
+      expect(avatar.center.dy, closeTo(search.center.dy, 4));
+      // And no longer in the folders page.
+      await openFolders(tester, layout);
+      expect(find.text(testAccount.email), findsNothing);
+    } else {
+      // At the bottom of the folders column, under the folders.
+      final avatar = tester.getRect(account);
+      expect(avatar.left, lessThan(240));
+      expect(
+        avatar.top,
+        greaterThan(tester.getRect(find.text('Cestino')).bottom),
+      );
+      expect(find.text(testAccount.email), findsOneWidget);
+    }
   });
 
   testBothLayouts('removing an account asks first, then forgets it', (
@@ -117,14 +158,13 @@ void main() {
     final app = AppHarness();
     await app.addAccount();
     await app.pump(tester, layout: layout);
-    await openFolders(tester, layout);
-    await tapLabel(tester, 'Account ${testAccount.email}');
+    await openAccountPanel(tester, testAccount.email);
 
     await tapText(tester, 'Rimuovi ${testAccount.email}');
     await tapText(tester, 'Annulla');
     expect(await app.accounts.load(), isNotEmpty);
 
-    await tapLabel(tester, 'Account ${testAccount.email}');
+    await openAccountPanel(tester, testAccount.email);
     await tapText(tester, 'Rimuovi ${testAccount.email}');
     await tester.tap(find.text('Rimuovi').last);
     await tester.pumpAndSettle();
