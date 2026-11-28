@@ -111,4 +111,19 @@ void main() {
     expect(parseMessageIds('<a@b> <c@d>'), ['<a@b>', '<c@d>']);
     expect(parseMessageIds(null), isEmpty);
   });
+
+  test('decodeModifiedUtf7: Gmail labels and folder names', () {
+    expect(decodeModifiedUtf7('Lavoro'), 'Lavoro');
+    expect(decodeModifiedUtf7('Caff&AOg-'), 'Caffè');
+    expect(decodeModifiedUtf7('Viaggi/Norv&AOg-gia'), 'Viaggi/Norvègia');
+    expect(decodeModifiedUtf7('&ZeVnLIqe-'), '日本語');
+    expect(decodeModifiedUtf7('A&-B'), 'A&B');
+  });
+
+  test('userLabels leaves out the system labels', () {
+    expect(userLabels([r'\Inbox', 'Lavoro', r'\Important', 'Viaggi']), [
+      'Lavoro',
+      'Viaggi',
+    ]);
+  });
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kaamos_mail/src/core/mail_errors.dart';
 
 import '../support/app_harness.dart';
 import '../support/fakes.dart';
@@ -82,6 +83,24 @@ void main() {
     expect(find.text('Oggetto 5'), findsOneWidget);
   });
 
+  testBothLayouts('a search with no matches shows no error', (
+    tester,
+    layout,
+  ) async {
+    // Regression: sorting the const [] returned for zero matches threw
+    // "Cannot modify an unmodifiable list" (seen on Gmail).
+    final app = AppHarness();
+    await app.addAccount();
+    await app.pump(tester, layout: layout);
+
+    final field = find.bySemanticsLabel('Cerca nella cartella');
+    await tester.enterText(field, 'prova');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+    expect(find.text('Nessun messaggio trovato.'), findsOneWidget);
+    expect(find.textContaining('Errore'), findsNothing);
+  });
+
   testBothLayouts('"Carica altri" loads the next page', (tester, layout) async {
     final app = AppHarness(inbox: 55);
     await app.addAccount();
@@ -110,7 +129,10 @@ void main() {
     await app.addAccount();
     await app.pump(tester, layout: layout);
 
-    app.server.failWith = Exception('server down');
+    app.server.failWith = const MailFailure(
+      MailFailureKind.network,
+      'Server non raggiungibile.',
+    );
     await tapLabel(tester, 'Aggiorna');
     expect(find.text('Chiudi'), findsOneWidget);
     expect(find.text('Oggetto 5'), findsOneWidget, reason: 'cache stays');

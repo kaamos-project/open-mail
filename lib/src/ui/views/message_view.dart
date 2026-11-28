@@ -1,10 +1,12 @@
+import 'dart:io' show FileSystemException;
+
 import 'package:flutter/widgets.dart';
 import 'package:kaamos_project_ui/kaamos_project_ui.dart';
 
 import '../../core/html_sanitizer.dart';
+import '../../core/mail_errors.dart';
 import '../../core/models.dart';
 import '../../core/text_utils.dart';
-import '../../data/imap_mail_service.dart' show describeMailError;
 import '../../state/compose_draft.dart';
 import '../../state/mailbox_controller.dart';
 import '../environment.dart';
@@ -154,6 +156,14 @@ class _MessageBodyState extends State<_MessageBody> {
     _sanitize();
   });
 
+  void _showAttachmentError(AttachmentInfo a, String reason) {
+    if (mounted) {
+      setState(
+        () => _attachmentError = 'Non riesco ad aprire ${a.fileName}: $reason',
+      );
+    }
+  }
+
   Future<void> _openAttachment(AttachmentInfo a) async {
     final env = MailEnvironment.of(context);
     setState(() {
@@ -163,13 +173,13 @@ class _MessageBodyState extends State<_MessageBody> {
     try {
       final bytes = await widget.controller.downloadAttachment(a);
       await env.files.openAttachment(a.fileName, bytes);
-    } on Object catch (e) {
-      if (mounted) {
-        setState(
-          () => _attachmentError =
-              'Non riesco ad aprire ${a.fileName}: ${describeMailError(e)}',
-        );
-      }
+    } on MailFailure catch (e) {
+      _showAttachmentError(a, e.message);
+    } on FileSystemException catch (e) {
+      // Saving the temporary copy failed (disk full, no permission).
+      _showAttachmentError(a, 'impossibile salvare il file (${e.message}).');
+    } catch (e, st) {
+      _showAttachmentError(a, describeInternalError(e, st));
     } finally {
       if (mounted) setState(() => _downloading = null);
     }
@@ -185,6 +195,7 @@ class _MessageBodyState extends State<_MessageBody> {
     // The star changes in the list (optimistic update), not in the content
     // already downloaded: read it from there.
     final flagged = c.openSummary?.flagged ?? s.flagged;
+    final labels = c.openSummary?.labels ?? s.labels;
     final me = c.account;
     // The message may come from a folder other than the open one (unified
     // Inbox): every action says which.
@@ -281,6 +292,10 @@ class _MessageBodyState extends State<_MessageBody> {
               style: KaamosTypography.headingMd.copyWith(color: theme.ink),
             ),
           ),
+          if (MailLabels.visible(labels, path).isNotEmpty) ...[
+            const SizedBox(height: 8),
+            MailLabels(labels: labels, hide: path),
+          ],
           const SizedBox(height: 16),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,

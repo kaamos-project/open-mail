@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:enough_mail/enough_mail.dart' as em;
 
+import '../core/mail_errors.dart';
 import '../core/mail_service.dart';
 import '../core/models.dart';
 import '../core/oauth.dart';
@@ -87,14 +89,16 @@ class ImapMailServiceFactory implements MailServiceFactory {
     );
     try {
       folders = (await service.listFolders()).length;
-    } on Object catch (e) {
-      imapError = describeMailError(e);
+    } on MailFailure catch (e) {
+      imapError = e.message;
     }
     try {
-      final smtp = await service._connectSmtp();
-      await smtp.quit();
-    } on Object catch (e) {
-      smtpError = describeMailError(e);
+      await _translated(() async {
+        final smtp = await service._connectSmtp();
+        await smtp.quit();
+      });
+    } on MailFailure catch (e) {
+      smtpError = e.message;
     }
     await service.close();
     return ConnectionCheckResult(
@@ -105,28 +109,74 @@ class ImapMailServiceFactory implements MailServiceFactory {
   }
 }
 
-/// Turns network and protocol errors into sentences for the user.
-String describeMailError(Object error) {
-  if (error is OAuthException) return error.message;
-  final text = error.toString().toLowerCase();
-  if (text.contains('authentication') ||
-      text.contains('login') ||
-      text.contains('credentials') ||
-      text.contains('535')) {
-    return 'Nome utente o password non accettati.';
+/// Turns an exception from the network or a mail protocol into a
+/// [MailFailure] with a sentence for the user.
+///
+/// Returns null for anything else: that is a bug in the app, not a server
+/// failure, and callers let it through unchanged.
+MailFailure? mailFailureFrom(Object error) => switch (error) {
+  MailFailure() => error,
+  OAuthException(:final message) => MailFailure(
+    MailFailureKind.auth,
+    message,
+    cause: error,
+  ),
+  em.ImapException(:final message) => _serverFailure(message, error),
+  // The SMTP text without the reply code: keep the code for auth (535).
+  em.SmtpException() => _serverFailure('$error', error),
+  em.MailException(:final message) => _serverFailure(message, error),
+  // Before SocketException: a failed handshake is not a network problem.
+  TlsException() => MailFailure(
+    MailFailureKind.secureConnection,
+    'Connessione sicura non riuscita: controlla porta e sicurezza.',
+    cause: error,
+  ),
+  TimeoutException() => MailFailure(
+    MailFailureKind.timeout,
+    'Il server non risponde.',
+    cause: error,
+  ),
+  SocketException() => MailFailure(
+    MailFailureKind.network,
+    'Server non raggiungibile: controlla la rete, indirizzo e porta.',
+    cause: error,
+  ),
+  _ => null,
+};
+
+/// A NO/BAD (IMAP) or 4xx/5xx (SMTP) reply: auth refusals get their own
+/// sentence, the rest shows the server's own text.
+MailFailure _serverFailure(String? text, Object cause) {
+  final lower = (text ?? '').toLowerCase();
+  if (lower.contains('authenticat') ||
+      lower.contains('login') ||
+      lower.contains('credentials') ||
+      lower.contains('535')) {
+    return MailFailure(
+      MailFailureKind.auth,
+      'Nome utente o password non accettati.',
+      cause: cause,
+    );
   }
-  if (text.contains('handshake') || text.contains('certificate')) {
-    return 'Connessione sicura non riuscita: controlla porta e sicurezza.';
+  return MailFailure(
+    MailFailureKind.server,
+    text == null || text.isEmpty
+        ? 'Il server ha risposto con un errore.'
+        : 'Il server ha risposto: $text',
+    cause: cause,
+  );
+}
+
+/// Runs [task] and rethrows expected failures as [MailFailure], keeping the
+/// original stack trace. Unknown errors (bugs) pass through unchanged.
+Future<T> _translated<T>(Future<T> Function() task) async {
+  try {
+    return await task();
+  } on Object catch (error, stackTrace) {
+    final failure = mailFailureFrom(error);
+    if (failure == null) rethrow;
+    Error.throwWithStackTrace(failure, stackTrace);
   }
-  if (text.contains('timeout') || text.contains('timed out')) {
-    return 'Il server non risponde.';
-  }
-  if (text.contains('socketexception') ||
-      text.contains('failed host lookup') ||
-      text.contains('connection refused')) {
-    return 'Server non raggiungibile: controlla indirizzo e porta.';
-  }
-  return 'Errore del server: $error';
 }
 
 /// An account connected via IMAP (reading) and SMTP (sending).
@@ -204,27 +254,53 @@ class ImapMailService implements MailService {
 
   /// Retries the operation once if the connection dropped (common on mobile
   /// when the app comes back to the foreground).
-  Future<T> _withRetry<T>(Future<T> Function() task) => _serial(() async {
-    try {
-      return await task();
-    } on Object catch (e) {
-      if (e is em.ImapException || e.toString().contains('Socket')) {
-        _imap = null;
-        _selectedPath = null;
-        return task();
+  ///
+  /// Failures come out as [MailFailure] (see [mailFailureFrom]).
+  Future<T> _withRetry<T>(Future<T> Function() task) => _serial(
+    () => _translated(() async {
+      try {
+        return await task();
+      } on em.ImapException {
+        return _retry(task);
+      } on SocketException {
+        return _retry(task);
       }
-      rethrow;
-    }
-  });
+    }),
+  );
+
+  /// Drops the connection and tries [task] once more on a fresh one.
+  Future<T> _retry<T>(Future<T> Function() task) {
+    _imap = null;
+    _selectedPath = null;
+    return task();
+  }
+
+  /// Gmail's IMAP extensions: labels, message and thread IDs.
+  static bool _isGmail(em.ImapClient client) =>
+      client.serverInfo.supports('X-GM-EXT-1');
+
+  /// Gmail's own folders ("[Gmail]/Tutti i messaggi", "[Gmail]/Speciali"…):
+  /// "[Google Mail]" in some countries.
+  static final _gmailSystemFolder = RegExp(r'^\[(Gmail|Google Mail)\]/');
 
   @override
   Future<List<Folder>> listFolders() => _withRetry(() async {
     final client = await _ensureImap();
+    final gmail = _isGmail(client);
     final boxes = await client.listMailboxes(recursive: true);
     final folders = [
       for (final box in boxes)
         if (!box.isNotSelectable)
-          Folder(path: box.path, name: _folderName(box), role: _role(box)),
+          Folder(
+            path: box.path,
+            name: _folderName(box),
+            role: _role(box),
+            isLabel:
+                gmail &&
+                _role(box) == FolderRole.other &&
+                !box.isSpecialUse &&
+                !_gmailSystemFolder.hasMatch(box.path),
+          ),
     ];
     folders.sort(compareFolders);
     return folders;
@@ -291,9 +367,10 @@ class ImapMailService implements MailService {
     return _withRetry(() async {
       final (client, _) = await _select(path);
       final sequence = em.MessageSequence.fromIds(uids, isUid: true);
+      final labels = _isGmail(client) ? ' X-GM-LABELS' : '';
       final result = await client.uidFetchMessages(
         sequence,
-        '(UID FLAGS ENVELOPE BODYSTRUCTURE)',
+        '(UID FLAGS ENVELOPE BODYSTRUCTURE$labels)',
       );
       final previews = await _fetchPreviews(client, result.messages);
       return [
@@ -377,17 +454,25 @@ class ImapMailService implements MailService {
       flagged: m.isFlagged,
       answered: m.isAnswered,
       hasAttachments: m.body != null && m.hasAttachments(),
+      labels: _labels(m) ?? const [],
     );
   }
+
+  /// Gmail sends labels in modified UTF-7, like folder names.
+  static List<String>? _labels(em.MimeMessage m) => m.xGmLabels == null
+      ? null
+      : [for (final l in m.xGmLabels!) decodeModifiedUtf7(l)];
 
   @override
   Future<Map<int, MessageFlagsState>> fetchFlags(String path, List<int> uids) {
     if (uids.isEmpty) return Future.value(const {});
     return _withRetry(() async {
       final (client, _) = await _select(path);
+      // Labels change from other devices like flags do: refresh them too.
+      final labels = _isGmail(client) ? ' X-GM-LABELS' : '';
       final result = await client.uidFetchMessages(
         em.MessageSequence.fromIds(uids, isUid: true),
-        '(UID FLAGS)',
+        '(UID FLAGS$labels)',
       );
       return {
         for (final m in result.messages)
@@ -396,6 +481,7 @@ class ImapMailService implements MailService {
               seen: m.isSeen,
               flagged: m.isFlagged,
               answered: m.isAnswered,
+              labels: _labels(m),
             ),
       };
     });
@@ -420,9 +506,10 @@ class ImapMailService implements MailService {
         final (client, _) = await _select(path);
         // BODY.PEEK: reading the message must not mark it as read by itself; we
         // do that with setSeen, so the user can undo it.
+        final labels = _isGmail(client) ? ' X-GM-LABELS' : '';
         final result = await client.uidFetchMessage(
           uid,
-          '(UID FLAGS ENVELOPE BODY.PEEK[])',
+          '(UID FLAGS ENVELOPE BODY.PEEK[]$labels)',
         );
         if (result.messages.isEmpty) {
           throw StateError('Messaggio $uid non trovato in $path');
@@ -472,6 +559,7 @@ class ImapMailService implements MailService {
         flagged: summary.flagged,
         answered: summary.answered,
         hasAttachments: attachments.isNotEmpty,
+        labels: summary.labels,
       ),
       cc: _addresses(m.envelope?.cc ?? m.cc),
       replyTo: _addresses(m.envelope?.replyTo ?? m.replyTo),
@@ -634,7 +722,10 @@ class ImapMailService implements MailService {
   String render(OutgoingMessage message) => _build(message).renderMessage();
 
   @override
-  Future<String> send(OutgoingMessage message) async {
+  Future<String> send(OutgoingMessage message) =>
+      _translated(() => _send(message));
+
+  Future<String> _send(OutgoingMessage message) async {
     final mime = _build(message);
     final smtp = await _connectSmtp();
     try {

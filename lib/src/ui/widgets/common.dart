@@ -75,6 +75,41 @@ class MailIconButton extends StatelessWidget {
   }
 }
 
+/// A message's Gmail labels as small badges. System labels are left out,
+/// and so is [hide] (the label of the folder being shown: every message
+/// there has it).
+class MailLabels extends StatelessWidget {
+  /// Creates the badges for [labels].
+  const MailLabels({super.key, required this.labels, this.hide});
+
+  /// All the message's labels, system ones included.
+  final List<String> labels;
+
+  /// A label not to show.
+  final String? hide;
+
+  /// The labels this widget shows.
+  static List<String> visible(List<String> labels, [String? hide]) => [
+    for (final l in userLabels(labels))
+      if (l != hide) l,
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final shown = visible(labels, hide);
+    if (shown.isEmpty) return const SizedBox.shrink();
+    return Semantics(
+      label: 'Etichette: ${shown.join(', ')}',
+      excludeSemantics: true,
+      child: Wrap(
+        spacing: 4,
+        runSpacing: 4,
+        children: [for (final l in shown) KaamosBadge(l)],
+      ),
+    );
+  }
+}
+
 /// Circle with initials.
 class MailAvatar extends StatelessWidget {
   /// Creates the avatar for [label].

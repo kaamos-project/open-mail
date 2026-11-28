@@ -157,7 +157,12 @@ enum FolderRole {
 @immutable
 class Folder {
   /// Creates a folder.
-  const Folder({required this.path, required this.name, required this.role});
+  const Folder({
+    required this.path,
+    required this.name,
+    required this.role,
+    this.isLabel = false,
+  });
 
   /// Full path on the server, e.g. `INBOX/Photography`.
   final String path;
@@ -167,6 +172,10 @@ class Folder {
 
   /// Special role, if any.
   final FolderRole role;
+
+  /// A Gmail label of the user (not a system folder like "[Gmail]/Spam").
+  /// Shown under "Etichette" instead of among the folders.
+  final bool isLabel;
 
   @override
   bool operator ==(Object other) =>
@@ -241,6 +250,7 @@ class MessageSummary {
     required this.flagged,
     required this.answered,
     required this.hasAttachments,
+    this.labels = const [],
   });
 
   /// IMAP UID, unique in the folder as long as `UIDVALIDITY` does not change.
@@ -273,20 +283,29 @@ class MessageSummary {
   /// Has at least one attachment.
   final bool hasAttachments;
 
+  /// Gmail labels, decoded, system ones (`\Inbox`, `\Important`…) included:
+  /// see [userLabels] for the ones to show. Empty on other servers.
+  final List<String> labels;
+
   /// Copy with some fields changed.
-  MessageSummary copyWith({bool? seen, bool? flagged, bool? answered}) =>
-      MessageSummary(
-        uid: uid,
-        from: from,
-        to: to,
-        subject: subject,
-        date: date,
-        preview: preview,
-        seen: seen ?? this.seen,
-        flagged: flagged ?? this.flagged,
-        answered: answered ?? this.answered,
-        hasAttachments: hasAttachments,
-      );
+  MessageSummary copyWith({
+    bool? seen,
+    bool? flagged,
+    bool? answered,
+    List<String>? labels,
+  }) => MessageSummary(
+    uid: uid,
+    from: from,
+    to: to,
+    subject: subject,
+    date: date,
+    preview: preview,
+    seen: seen ?? this.seen,
+    flagged: flagged ?? this.flagged,
+    answered: answered ?? this.answered,
+    hasAttachments: hasAttachments,
+    labels: labels ?? this.labels,
+  );
 }
 
 /// An attachment of a downloaded message.

@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kaamos_mail/src/core/mail_errors.dart';
 import 'package:kaamos_mail/src/core/models.dart';
 import 'package:kaamos_mail/src/data/mail_cache.dart';
 import 'package:kaamos_mail/src/state/mailbox_controller.dart';
@@ -96,7 +97,10 @@ void main() {
 
   test('if the server refuses, the star goes back', () async {
     await c.start();
-    server.failWith = Exception('rete giù');
+    server.failWith = const MailFailure(
+      MailFailureKind.network,
+      'Server non raggiungibile.',
+    );
     await c.setFlagged([25], flagged: true);
     expect(c.messages.first.flagged, isFalse);
     expect(c.error, isNotNull);
@@ -165,9 +169,20 @@ void main() {
     expect(c.messages, hasLength(10));
   });
 
+  test('a bug is shown as an internal error, not a server one', () async {
+    await c.start();
+    server.failWith = StateError('bug');
+    await c.refresh();
+    expect(c.error, startsWith("Errore interno dell'app"));
+    expect(c.syncing, isFalse);
+  });
+
   test('without network the error shows and the cache stays', () async {
     await c.start();
-    server.failWith = Exception('offline');
+    server.failWith = const MailFailure(
+      MailFailureKind.network,
+      'Server non raggiungibile.',
+    );
     await c.refresh();
     expect(c.error, isNotNull);
     expect(c.messages, hasLength(10));

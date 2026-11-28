@@ -45,7 +45,7 @@ void main() {
   test('updates flags and removes vanished UIDs', () {
     cache.upsertSummaries('a', 'INBOX', [summary(1), summary(2)]);
     cache.updateFlags('a', 'INBOX', {
-      1: (seen: true, flagged: true, answered: false),
+      1: (seen: true, flagged: true, answered: false, labels: null),
     });
     cache.removeUids('a', 'INBOX', [2]);
     final list = cache.loadSummaries('a', 'INBOX');
@@ -110,5 +110,40 @@ void main() {
     upgraded.upsertSummaries('a', 'INBOX', [summary(1)]);
     upgraded.saveArrivalDates('a', 'INBOX', {1: DateTime.utc(2026)});
     expect(upgraded.loadSummaries('a', 'INBOX').single.uid, 1);
+  });
+
+  test('Gmail labels are saved and refreshed with the flags', () {
+    cache.upsertSummaries('a', 'INBOX', [
+      summary(1, labels: [r'\Inbox', 'Lavoro']),
+      summary(2),
+    ]);
+    expect(cache.loadSummaries('a', 'INBOX').last.labels, [
+      r'\Inbox',
+      'Lavoro',
+    ]);
+
+    cache.updateFlags('a', 'INBOX', {
+      1: (seen: true, flagged: false, answered: false, labels: ['Viaggi']),
+      // Null: a server without labels, keep what is saved.
+      2: (seen: true, flagged: false, answered: false, labels: null),
+    });
+    final byUid = {for (final m in cache.loadSummaries('a', 'INBOX')) m.uid: m};
+    expect(byUid[1]!.labels, ['Viaggi']);
+    expect(byUid[2]!.labels, isEmpty);
+  });
+
+  test('label folders keep their flag', () {
+    cache.saveFolders('a', const [
+      Folder(path: 'INBOX', name: 'INBOX', role: FolderRole.inbox),
+      Folder(
+        path: 'Lavoro',
+        name: 'Lavoro',
+        role: FolderRole.other,
+        isLabel: true,
+      ),
+    ]);
+    final folders = cache.loadFolders('a');
+    expect(folders.firstWhere((f) => f.path == 'Lavoro').isLabel, isTrue);
+    expect(folders.firstWhere((f) => f.path == 'INBOX').isLabel, isFalse);
   });
 }
