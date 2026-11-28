@@ -3,10 +3,10 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 
+import '../core/mail_errors.dart';
 import '../core/mail_service.dart';
 import '../core/models.dart';
 import '../core/text_utils.dart';
-import '../data/imap_mail_service.dart' show describeMailError;
 import '../data/mail_cache.dart';
 
 /// The mailbox state of one account: folders, list, open message.
@@ -144,8 +144,10 @@ class MailboxController extends ChangeNotifier {
       }
       await _syncFolder(service, current.path);
       lastSync = DateTime.now();
-    } on Object catch (e) {
-      error = describeMailError(e);
+    } on MailFailure catch (e) {
+      error = e.message;
+    } catch (e, st) {
+      error = describeInternalError(e, st);
     } finally {
       syncing = false;
       _notify();
@@ -253,8 +255,10 @@ class MailboxController extends ChangeNotifier {
     _notify();
     try {
       await _syncFolder(await _ensureService(), inbox.path);
-    } on Object catch (e) {
-      error = describeMailError(e);
+    } on MailFailure catch (e) {
+      error = e.message;
+    } catch (e, st) {
+      error = describeInternalError(e, st);
     } finally {
       _inboxSyncing = false;
       _notify();
@@ -300,11 +304,15 @@ class MailboxController extends ChangeNotifier {
       final uids = await service.search(current.path, q);
       // Newest first, at most one page.
       final top = uids.reversed.take(pageSize).toList();
-      final results = await service.fetchSummaries(current.path, top);
+      // Copy: the service may return an unmodifiable list (const [] when
+      // nothing matches), and sorting it in place would throw.
+      final results = [...await service.fetchSummaries(current.path, top)];
       results.sort((a, b) => b.uid.compareTo(a.uid));
       if (searchQuery == q) messages = results;
-    } on Object catch (e) {
-      error = describeMailError(e);
+    } on MailFailure catch (e) {
+      error = e.message;
+    } catch (e, st) {
+      error = describeInternalError(e, st);
     } finally {
       syncing = false;
       _notify();
@@ -329,8 +337,10 @@ class MailboxController extends ChangeNotifier {
       if (summary != null && !summary.seen) {
         await setSeen([uid], seen: true, path: folder);
       }
-    } on Object catch (e) {
-      if (openUid == uid) error = describeMailError(e);
+    } on MailFailure catch (e) {
+      if (openUid == uid) error = e.message;
+    } catch (e, st) {
+      if (openUid == uid) error = describeInternalError(e, st);
     } finally {
       if (openUid == uid) loadingMessage = false;
       _notify();
@@ -402,12 +412,19 @@ class MailboxController extends ChangeNotifier {
     final before = _summaries(path, uids);
     _apply(path, [for (final m in before) change(m)]);
     _notify();
+    // Puts the rows back as they were and shows why.
+    void undo(String message) {
+      _apply(path, before);
+      error = message;
+      _notify();
+    }
+
     try {
       await remote(await _ensureService());
-    } on Object catch (e) {
-      _apply(path, before);
-      error = describeMailError(e);
-      _notify();
+    } on MailFailure catch (e) {
+      undo(e.message);
+    } catch (e, st) {
+      undo(describeInternalError(e, st));
     }
   }
 
@@ -459,6 +476,14 @@ class MailboxController extends ChangeNotifier {
       closeMessage();
     }
     _notify();
+    // Puts the rows back as they were and shows why.
+    void undo(String message) {
+      if (isCurrent) messages = beforeList;
+      cache.upsertSummaries(account.id, path, beforeRows);
+      error = message;
+      _notify();
+    }
+
     try {
       await remote(await _ensureService());
       if (isCurrent) {
@@ -468,11 +493,10 @@ class MailboxController extends ChangeNotifier {
         ];
         _window = math.min(_window, _serverUids.length);
       }
-    } on Object catch (e) {
-      if (isCurrent) messages = beforeList;
-      cache.upsertSummaries(account.id, path, beforeRows);
-      error = describeMailError(e);
-      _notify();
+    } on MailFailure catch (e) {
+      undo(e.message);
+    } catch (e, st) {
+      undo(describeInternalError(e, st));
     }
   }
 
@@ -530,10 +554,15 @@ class MailboxController extends ChangeNotifier {
     if (sent != null && !serverSavesSent) {
       try {
         await service.append(sent.path, raw, flags: const [r'\Seen']);
-      } on Object catch (e) {
+      } on MailFailure catch (e) {
         error =
             'Inviato, ma la copia in Inviati non è stata salvata: '
-            '${describeMailError(e)}';
+            '${e.message}';
+        _notify();
+      } catch (e, st) {
+        error =
+            'Inviato, ma la copia in Inviati non è stata salvata: '
+            '${describeInternalError(e, st)}';
         _notify();
       }
     }

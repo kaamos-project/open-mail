@@ -45,6 +45,8 @@ The state layer only sees this interface. Two consequences:
 
 `ImapMailService` uses the low-level IMAP client of `enough_mail`, not its high-level `MailClient`, because the cache needs control over UIDs and `UIDVALIDITY`. IMAP is stateful (the selected folder), so every operation goes through a serial queue: two interleaved commands can never read the wrong folder. A dropped connection is retried once, which is common on mobile when the app comes back to the foreground.
 
+Every service call fails with a `MailFailure` for expected server or network problems; anything else is a bug. See [Error handling](error-handling.md).
+
 ## Dependency injection: `MailEnvironment`
 
 `main.dart` builds the real services and passes them to `KaamosMailApp`, which puts them in `MailEnvironment`, an `InheritedWidget`:
@@ -108,6 +110,7 @@ Every widget comes from `kaamos_project_ui`, the Kaamos design system, pinned as
 
 ## See also
 
+- [Error handling](error-handling.md)
 - [Sync and cache](sync-and-cache.md)
 - [Testing](testing.md)
 - [Decisions](decisions.md)

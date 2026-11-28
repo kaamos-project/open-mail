@@ -41,7 +41,7 @@ If `isAvailable()` is false, the app shows `KeychainMissingScreen`, which explai
 
 ## Adding an account
 
-`AccountSetupScreen` asks for IMAP and SMTP settings (or offers Google / Microsoft sign-in), then calls `MailServiceFactory.check()`. It tests **both** servers with the real credentials and shows a readable error for each before saving anything. `describeMailError` turns network and protocol errors into sentences for the user.
+`AccountSetupScreen` asks for IMAP and SMTP settings (or offers Google / Microsoft sign-in), then calls `MailServiceFactory.check()`. It tests **both** servers with the real credentials and shows a readable error for each before saving anything. `mailFailureFrom` turns network and protocol errors into sentences for the user (see [Error handling](error-handling.md)).
 
 ## OAuth2 accounts
 

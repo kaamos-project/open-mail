@@ -166,12 +166,14 @@ class FakeMailService implements MailService {
     List<int> uids,
   ) async {
     _check();
+    // Like ImapMailService: an empty request returns an unmodifiable list.
+    if (uids.isEmpty) return const [];
     fetchedSummaries += uids.length;
     final f = folders[path]!;
-    return [
+    return List.unmodifiable([
       for (final u in uids)
         if (f.messages[u] != null) f.messages[u]!,
-    ];
+    ]);
   }
 
   @override

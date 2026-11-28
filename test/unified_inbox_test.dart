@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kaamos_mail/src/core/mail_errors.dart';
 import 'package:kaamos_mail/src/core/models.dart';
 import 'package:kaamos_mail/src/data/mail_cache.dart';
 import 'package:kaamos_mail/src/data/secret_store.dart';
@@ -92,7 +93,10 @@ void main() {
   );
 
   test('if the server refuses, the message comes back in the view', () async {
-    personal.failWith = StateError('giù');
+    personal.failWith = const MailFailure(
+      MailFailureKind.network,
+      'Server non raggiungibile.',
+    );
     await a.archive([2], path: 'INBOX');
     expect(order(), contains('acc1:2'));
     expect(unified.error, startsWith(testAccount.email));

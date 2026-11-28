@@ -1,9 +1,9 @@
 import 'package:flutter/widgets.dart';
 import 'package:kaamos_project_ui/kaamos_project_ui.dart';
 
+import '../../core/mail_errors.dart';
 import '../../core/models.dart';
 import '../../core/text_utils.dart';
-import '../../data/imap_mail_service.dart' show describeMailError;
 import '../../state/compose_draft.dart';
 import '../../state/mailbox_controller.dart';
 import '../environment.dart';
@@ -151,13 +151,19 @@ class _ComposeViewState extends State<ComposeView> {
         answeredPath: widget.draft.answeredPath,
       );
       if (mounted) widget.onClose();
-    } on Object catch (e) {
-      if (mounted) {
-        setState(() {
-          _sending = false;
-          _error = 'Non inviato: ${describeMailError(e)}';
-        });
-      }
+    } on MailFailure catch (e) {
+      _failed('Non inviato: ${e.message}');
+    } catch (e, st) {
+      _failed('Non inviato: ${describeInternalError(e, st)}');
+    }
+  }
+
+  void _failed(String message) {
+    if (mounted) {
+      setState(() {
+        _sending = false;
+        _error = message;
+      });
     }
   }
 
@@ -214,10 +220,10 @@ class _ComposeViewState extends State<ComposeView> {
         } else {
           setState(() => _error = 'Questo account non ha una cartella Bozze.');
         }
-      } on Object catch (e) {
-        if (mounted) {
-          setState(() => _error = 'Bozza non salvata: ${describeMailError(e)}');
-        }
+      } on MailFailure catch (e) {
+        _failed('Bozza non salvata: ${e.message}');
+      } catch (e, st) {
+        _failed('Bozza non salvata: ${describeInternalError(e, st)}');
       }
     }
   }

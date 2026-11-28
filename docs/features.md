@@ -41,6 +41,7 @@ This page is the spec: when a feature moves or changes, update the row and its t
 | Search in the folder; clearing it shows the folder again | Field in the list header | Same | `folders_and_list_test`: search |
 | "Carica altri" at the bottom (50 at a time) | Same | Same | `folders_and_list_test`: "Carica altri" |
 | Error banner with "Chiudi"; the cached list stays | Over the list | Same | `folders_and_list_test`: server error |
+| A search with no matches shows "Nessun messaggio trovato.", no error | List | Same | `folders_and_list_test`: search with no matches |
 
 ## Gmail labels
 

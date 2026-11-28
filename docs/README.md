@@ -10,6 +10,7 @@ This wiki explains **how the app works and why it is built this way**. Start fro
 |---|---|
 | [Getting started](getting-started.md) | Install Flutter, run the app, the checks CI runs |
 | [Architecture](architecture.md) | The four layers (`core`, `data`, `state`, `ui`) and how they talk |
+| [Error handling](error-handling.md) | Server failures (`MailFailure`) versus bugs, and where each is caught |
 | [Sync and cache](sync-and-cache.md) | How a folder is refreshed, the SQLite schema, sorting by arrival date |
 | [Accounts and secrets](accounts-and-security.md) | `accounts.json`, the keychain, what happens without one |
 | [Google and Microsoft sign-in](oauth.md) | OAuth2 + XOAUTH2, registering the app, client IDs |
