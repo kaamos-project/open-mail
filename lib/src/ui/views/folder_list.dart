@@ -66,32 +66,17 @@ class FolderList extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (onCompose != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-                child: KaamosButton(
-                  onPressed: onCompose,
-                  leading: MailIconView(
-                    MailIcon.edit,
-                    size: 16,
-                    color: theme.canvas,
-                  ),
-                  child: const Text('Scrivi'),
-                ),
-              )
-            else
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 20, 16, 12),
-                child: Semantics(
-                  header: true,
-                  child: Text(
-                    'Kaamos Mail',
-                    style: KaamosTypography.headingSm.copyWith(
-                      color: theme.ink,
-                    ),
-                  ),
+            // The app's name on top, on the phone and on desktop alike.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 20, 16, 12),
+              child: Semantics(
+                header: true,
+                child: Text(
+                  'Kaamos Mail',
+                  style: KaamosTypography.headingSm.copyWith(color: theme.ink),
                 ),
               ),
+            ),
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -153,6 +138,20 @@ class FolderList extends StatelessWidget {
                 ],
               ),
             ),
+            // Desktop: "Scrivi" at the bottom, right above the account.
+            if (onCompose != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                child: KaamosButton(
+                  onPressed: onCompose,
+                  leading: MailIconView(
+                    MailIcon.edit,
+                    size: 16,
+                    color: theme.canvas,
+                  ),
+                  child: const Text('Scrivi'),
+                ),
+              ),
             if (onAccount != null) ...[
               const Hairline(),
               KaamosPressable(

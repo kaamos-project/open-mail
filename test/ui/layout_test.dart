@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kaamos_project_ui/kaamos_project_ui.dart';
 
 import '../support/app_harness.dart';
+import '../support/fakes.dart';
 
 /// The box of the panel (the panel itself is a full-screen Align).
 Finder get drawerBox => find
@@ -90,6 +91,32 @@ void main() {
       expect(find.text('Nuovo messaggio'), findsOneWidget);
     });
   });
+
+  testLayout(
+    Layout.desktop,
+    'sidebar: title on top, Scrivi above the account',
+    (tester) async {
+      final app = AppHarness();
+      await app.addAccount();
+      await app.pump(tester, layout: Layout.desktop);
+
+      final title = tester.getRect(find.text('Kaamos Mail'));
+      final inbox = tester.getRect(find.text('Posta in arrivo').first);
+      final compose = tester.getRect(find.text('Scrivi'));
+      final account = tester.getRect(find.text(testAccount.email));
+      expect(title.top, lessThan(inbox.top), reason: 'name above the folders');
+      expect(
+        compose.top,
+        greaterThan(inbox.top),
+        reason: 'Scrivi at the bottom',
+      );
+      expect(
+        compose.bottom,
+        lessThan(account.top),
+        reason: 'above the account',
+      );
+    },
+  );
 
   group('desktop compose window', () {
     testLayout(Layout.desktop, 'opens at the bottom right, over the reader', (

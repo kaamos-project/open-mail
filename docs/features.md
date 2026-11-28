@@ -75,7 +75,7 @@ Only for servers that announce `X-GM-EXT-1` (Gmail): see [Gmail labels](gmail-la
 
 | Feature | Phone | Desktop | Test (`test/ui/`) |
 |---|---|---|---|
-| New message from "Scrivi" | Floating button (`KaamosFab`) on the list; the label hides while scrolling down | Button at the top of the folders | `compose_test`: new message; `layout_test`: the Scrivi button shrinks |
+| New message from "Scrivi" | Floating button (`KaamosFab`) on the list; the label hides while scrolling down | Button at the bottom of the folders column, above the account; "Kaamos Mail" on top, like the phone's drawer | `compose_test`: new message; `layout_test`: the Scrivi button shrinks, sidebar order |
 | Compose window: floating 16 px from the bottom-right corner, 560 px wide, 45% of the window tall (360 to 720 px), rounded corners and shadow; fields scroll when it is short; title follows the subject; the list and reader stay usable | — | Window | `layout_test`: opens at the bottom right; `mail_home_test`: height |
 | Minimize to the title bar keeping the text; restore; expand to a large window and back | — | Window title bar | `layout_test`: minimize keeps what was written, expand |
 | One window at a time: "Scrivi" brings back the open one; a reply or forward first asks about the open message | — | Window | `layout_test`: Scrivi again, a reply asks |
