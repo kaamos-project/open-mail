@@ -9,7 +9,6 @@ import '../../state/compose_draft.dart';
 import '../../state/mailbox_controller.dart';
 import '../environment.dart';
 import '../widgets/common.dart';
-import '../widgets/mail_icons.dart';
 import '../widgets/text_area.dart';
 
 /// The addresses of one row (To, Cc, Bcc): the confirmed chips plus the text
@@ -285,7 +284,7 @@ class ComposeViewState extends State<ComposeView> {
           child: Row(
             children: [
               MailIconButton(
-                icon: MailIcon.back,
+                icon: const KaamosIcon(KaamosIcons.chevronLeft),
                 label: 'Chiudi',
                 size: 44,
                 onPressed: _sending ? null : _close,
@@ -305,7 +304,7 @@ class ComposeViewState extends State<ComposeView> {
                 ),
               ),
               MailIconButton(
-                icon: MailIcon.paperclip,
+                icon: const KaamosIcon(KaamosIcons.paperclip),
                 label: 'Allega file',
                 size: 44,
                 onPressed: _sending ? null : _attach,
@@ -371,7 +370,7 @@ class ComposeViewState extends State<ComposeView> {
                 _sendButton(theme),
                 const SizedBox(width: 8),
                 MailIconButton(
-                  icon: MailIcon.paperclip,
+                  icon: const KaamosIcon(KaamosIcons.paperclip),
                   label: 'Allega file',
                   size: 40,
                   onPressed: _sending ? null : _attach,
@@ -386,8 +385,8 @@ class ComposeViewState extends State<ComposeView> {
 
   Widget _sendButton(KaamosThemeData theme) => KaamosButton(
     onPressed: _sending ? null : _send,
-    leading: MailIconView(
-      MailIcon.send,
+    leading: KaamosIcon(
+      KaamosIcons.send,
       size: 16,
       color: _sending ? theme.disabledForeground : theme.canvas,
     ),
@@ -402,7 +401,7 @@ class ComposeViewState extends State<ComposeView> {
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
           child: MailBanner(
-            icon: MailIcon.send,
+            icon: KaamosIcons.send,
             danger: true,
             message: _error!,
           ),
@@ -545,20 +544,26 @@ class _WindowBar extends StatelessWidget {
               ),
             ),
             MailIconButton(
-              icon: window.minimized ? MailIcon.expand : MailIcon.minimize,
+              icon: KaamosIcon(
+                window.minimized ? KaamosIcons.maximize2 : KaamosIcons.minus,
+              ),
               label: window.minimized ? 'Ripristina' : 'Riduci',
               size: 36,
               onPressed: window.onToggleMinimized,
             ),
             if (!window.minimized)
               MailIconButton(
-                icon: window.expanded ? MailIcon.collapse : MailIcon.expand,
+                icon: KaamosIcon(
+                  window.expanded
+                      ? KaamosIcons.minimize2
+                      : KaamosIcons.maximize2,
+                ),
                 label: window.expanded ? 'Dimensione normale' : 'Ingrandisci',
                 size: 36,
                 onPressed: window.onToggleExpanded,
               ),
             MailIconButton(
-              icon: MailIcon.close,
+              icon: const KaamosIcon(KaamosIcons.x),
               label: 'Chiudi',
               size: 36,
               onPressed: onClose,

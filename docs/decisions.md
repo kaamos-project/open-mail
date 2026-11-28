@@ -90,6 +90,12 @@ The key choices behind Kaamos Mail, each with the alternatives and the trade-off
 **Decision**: `kaamos_project_ui` comes from `open-ui-flutter` as a git dependency pinned to a commit (a tag once `v0.1.0` exists). No pub.dev for now.
 **Why**: the library evolves together with the app; a pinned ref keeps builds reproducible.
 
+## Icons: Lucide from the design system
+
+**Decision** (November 2026): every icon is a Lucide icon from `KaamosIcons` (re-exported by `kaamos_project_ui`), shown with `KaamosIcon`. `MailIconButton` takes a widget (`icon: const KaamosIcon(KaamosIcons.reply)`) and sets size and colour through `IconTheme`. The app's own `CustomPaint` icons (`MailIcon`) are gone.
+**Why**: one consistent set shared by every Kaamos app; release builds keep only the glyphs used.
+**Trade-off**: Lucide has no filled icons and a font can't fill a shape, so the starred-message icon is `FilledStarIcon` (`lib/src/ui/widgets/mail_icons.dart`): a painted fill under Lucide's star outline. Icons must stay `const` for tree-shaking. In tests icons are Ahem boxes, like the text, because the tests don't load fonts.
+
 ## License: GPLv3
 
 **Decision**: GPL-3.0.

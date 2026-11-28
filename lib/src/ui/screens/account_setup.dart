@@ -10,7 +10,6 @@ import '../../core/oauth.dart';
 import '../../core/text_utils.dart';
 import '../environment.dart';
 import '../widgets/common.dart';
-import '../widgets/mail_icons.dart';
 
 /// "Add an account": sign in with Google or Microsoft, or manual IMAP and
 /// SMTP; then check and save.
@@ -373,7 +372,7 @@ class _AccountSetupScreenState extends State<AccountSetupScreen> {
               const SizedBox(height: 6),
               Row(
                 children: [
-                  MailIconView(MailIcon.lock, size: 13, color: theme.mute),
+                  KaamosIcon(KaamosIcons.lock, size: 13, color: theme.mute),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
@@ -525,8 +524,8 @@ class _ServerBox extends StatelessWidget {
       ),
       _CheckState.ok => Row(
         children: [
-          const MailIconView(
-            MailIcon.lock,
+          const KaamosIcon(
+            KaamosIcons.lock,
             size: 14,
             color: KaamosColors.accentGreen,
           ),
