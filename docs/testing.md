@@ -43,6 +43,13 @@ When you add a feature, add its row to [Features](features.md) and its test here
 
 Why is the cache tested so much? Because it uses hand-written SQL with no compile-time checks: see [Decisions](decisions.md#sqlite-without-an-orm).
 
+## Golden tests
+
+A few looks can only be checked pixel by pixel. `test/ui/compose_window_golden_test.dart` compares the desktop compose window with `test/ui/goldens/compose_window.png`: the border must go all around, over the title bar too, with no wide shadow.
+
+- Tests use the Ahem font (every letter is a box), so goldens don't depend on the installed fonts.
+- Goldens are generated on Linux, like CI's runner, because anti-aliasing differs slightly between systems. After an intended visual change: `flutter test --update-goldens test/ui/compose_window_golden_test.dart`, then look at the new PNG before committing it.
+
 ## Before a pull request
 
 ```sh

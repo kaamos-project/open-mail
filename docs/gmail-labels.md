@@ -17,7 +17,7 @@ Other servers are not affected: the extra items are only requested from Gmail.
 ## What is shown
 
 - `MessageSummary.labels` holds every label, system ones included (`\Inbox`, `\Important`, `\Sent`…). `userLabels` keeps only the user's labels, the ones a person created.
-- `MailLabels` (in `ui/widgets/common.dart`) shows them as `KaamosChip`s: small on the list row, medium under the subject in the reader. It leaves out the label of the open folder: in "Lavoro" every message has "Lavoro".
+- `MailLabels` (in `ui/widgets/common.dart`) shows them as `KaamosChip`s: small on the list row, medium under the subject in the reader. It shows every user label, also the one of the open folder: a message can have several, and in "Lavoro" you still want to see and remove "Lavoro" (Alessio's choice, November 2026; it first hid it).
 - They used to be `KaamosBadge`s, which nearly vanished on the dark canvas (the badge fill is almost the canvas colour). A chip has a white 8% fill and a 16% border.
 - The folder list puts labels in their own "Etichette" section, after the system folders. A label is an IMAP folder, so opening it works like any folder.
 
@@ -28,7 +28,7 @@ In the open message each chip has an X ("Togli etichetta …"). The rows have no
 - `MailboxController.removeLabel` is optimistic like the star: the chip disappears at once (screen and cache), then `MailService.storeLabels` runs `UID STORE <uid> -X-GM-LABELS.SILENT ("<label>")` on the open folder. If the server refuses, the label comes back and the error shows (on the phone, in a banner on the message page).
 - Labels are kept decoded in the app, so they are encoded back with `encodeModifiedUtf7` and quoted with `imapQuote`.
 - **enough_mail's private API.** `uidStore` can only write `FLAGS`, and enough_mail has no public way to send another STORE item. `storeLabels` uses its `Command` and `GenericParser` from `src/private`, with an `ignore: implementation_imports`. If an update of enough_mail breaks it, it breaks in that one method; an upstream PR that adds a public way would remove the import.
-- Removing the label of the open folder makes the message leave that folder, as in Gmail. That's why the reader never shows the open folder's label: there is no X to press for it.
+- Removing the label of the open folder makes the message leave that folder, as in Gmail. `removeLabel` sees it (`isFolderLabel`, which compares the decoded folder path) and takes the message out of the list like a move; on the phone the message page goes back to the list, like after Archive.
 
 ## Cache
 

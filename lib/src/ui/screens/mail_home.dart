@@ -3,19 +3,41 @@ import 'package:flutter/widgets.dart';
 import 'package:kaamos_project_ui/kaamos_project_ui.dart';
 
 import '../../core/models.dart';
+import '../../core/settings.dart';
 import '../../state/compose_draft.dart';
 import '../../state/mailbox_controller.dart';
 import '../../state/unified_inbox.dart';
+import '../environment.dart';
 import '../views/compose.dart';
 import '../views/folder_list.dart';
 import '../views/message_list.dart';
 import '../views/message_view.dart';
 import '../widgets/common.dart';
 import '../widgets/mail_icons.dart';
+import 'settings_screen.dart';
 
 /// From this width up: three columns (desktop). Below: pages stacked on each
 /// other (mobile).
 const double desktopBreakpoint = 900;
+
+/// The gap between the desktop compose window and the window's edges: it
+/// floats, like Gmail's.
+const double composeWindowMargin = 16;
+
+/// The desktop compose window's size, fixed like Gmail's: it doesn't
+/// grow or shrink with the app's window. On a 1080p screen it is a bit
+/// less than half the height; on a small window it no longer gets
+/// squashed (Alessio, November 2026, replacing "45% of the window").
+const Size composeWindowSize = Size(560, 480);
+
+/// The compose window's height in a window [available] pixels tall: the
+/// fixed [composeWindowSize] height, unless the app's window is too short
+/// for it. Then it takes all the height there is minus the margins, and
+/// the fields and text scroll inside it, as Gmail does.
+double composeWindowHeight(double available) {
+  final room = available - 2 * composeWindowMargin;
+  return composeWindowSize.height < room ? composeWindowSize.height : room;
+}
 
 /// A page with no animation and the theme background, for the Navigator.
 Route<T> mailPage<T>(WidgetBuilder builder) => PageRouteBuilder<T>(
@@ -186,11 +208,13 @@ class _MailHomeState extends State<MailHome> {
     bool desktop, {
     Widget? leading,
     Widget? trailing,
+    bool compact = false,
   }) {
     final unified = widget.unified;
     if (unified != null) {
       return UnifiedMessageList(
         inbox: unified,
+        compact: compact,
         leading: leading,
         trailing: trailing,
         onOpen: (item) => _openUnified(context, item, desktop),
@@ -198,6 +222,7 @@ class _MailHomeState extends State<MailHome> {
     }
     return MessageList(
       controller: _c,
+      compact: compact,
       leading: leading,
       trailing: trailing,
       onOpen: (m) => _open(context, m, desktop),
@@ -207,6 +232,19 @@ class _MailHomeState extends State<MailHome> {
   /// Choosing a folder leaves the unified Inbox.
   void _folderChosen() {
     if (widget.unified != null) widget.onLeaveUnified?.call();
+  }
+
+  /// Opens the settings page, over everything, on the phone and on desktop.
+  void _openSettings(BuildContext context) {
+    final settings = MailEnvironment.of(context).settings;
+    Navigator.of(context).push<void>(
+      mailPage(
+        (context) => SettingsScreen(
+          settings: settings,
+          onBack: () => Navigator.of(context).pop(),
+        ),
+      ),
+    );
   }
 
   Future<void> _showAccount(BuildContext context) async {
@@ -312,8 +350,35 @@ class _MailHomeState extends State<MailHome> {
   }
 
   Widget _desktop(BuildContext context, BoxConstraints constraints) {
+    final settings = MailEnvironment.of(context).settings;
+    return ListenableBuilder(
+      listenable: settings,
+      builder: (context, _) =>
+          _desktopWith(context, constraints, settings.value),
+    );
+  }
+
+  Widget _desktopWith(
+    BuildContext context,
+    BoxConstraints constraints,
+    AppSettings settings,
+  ) {
     final listWidth = constraints.maxWidth >= 1200 ? 400.0 : 340.0;
     final draft = _desktopDraft;
+    // "Pagina": the message being written takes the place of the list and
+    // the reader, like a page of its own. The mail stays built underneath
+    // (Offstage), so closing it finds the list where it was.
+    final composePage = draft != null && settings.compose == ComposeMode.page;
+    final mail = settings.layout == MailLayout.split
+        ? Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(width: listWidth, child: _list(context, true)),
+              const VerticalHairline(),
+              Expanded(child: _desktopReader(context)),
+            ],
+          )
+        : _listOnly(context);
     // Three columns scroll on their own. On Android and iOS (a tablet in
     // landscape) every vertical list would otherwise attach to the same
     // PrimaryScrollController, and the scrollbar breaks with "attached to
@@ -329,18 +394,37 @@ class _MailHomeState extends State<MailHome> {
               onCompose: () => _compose(context, const ComposeDraft(), true),
               onSelected: (_) => _folderChosen(),
               onAccount: () => _showAccount(context),
+              onSettings: () => _openSettings(context),
               onUnified: widget.onShowUnified,
               unified: widget.unified != null,
             ),
           ),
           const VerticalHairline(),
-          SizedBox(width: listWidth, child: _list(context, true)),
-          const VerticalHairline(),
-          Expanded(child: _desktopReader(context)),
+          Expanded(
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: Offstage(
+                    offstage: composePage,
+                    child: TickerMode(enabled: !composePage, child: mail),
+                  ),
+                ),
+                if (composePage)
+                  Positioned.fill(
+                    child: ComposeView(
+                      key: _composeKey,
+                      controller: _draftFrom ?? _c,
+                      draft: draft,
+                      onClose: _closeWindow,
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ],
       ),
     );
-    if (draft == null) return columns;
+    if (draft == null || composePage) return columns;
     return Stack(
       children: [
         Positioned.fill(child: columns),
@@ -373,30 +457,34 @@ class _MailHomeState extends State<MailHome> {
         }),
       ),
     );
-    final window = DecoratedBox(
+    const radius = BorderRadius.all(Radius.circular(12));
+    // The border is a *foreground* decoration: it is painted over the
+    // content, so the title bar's background can't cover it, and it
+    // follows exactly the same rounded shape the content is clipped to.
+    // (Before, the border was painted behind the content: the title bar
+    // hid it at the top, and the clip's corners didn't match it.)
+    final window = Container(
       key: const ValueKey('compose-window'),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: theme.canvas,
-        border: Border.all(color: theme.hairlineStrong),
-        borderRadius: BorderRadius.vertical(
-          top: const Radius.circular(12),
-          bottom: Radius.circular(_expanded ? 12 : 0),
-        ),
+        borderRadius: radius,
+        // A short, tight shadow: it separates the window from a light
+        // mail in the reader. A wide blur on the dark canvas looked like
+        // a grey halo around the window.
         boxShadow: const [
           BoxShadow(
-            color: Color(0x80000000),
-            blurRadius: 24,
-            offset: Offset(0, 8),
+            color: Color(0x40000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.vertical(
-          top: const Radius.circular(12),
-          bottom: Radius.circular(_expanded ? 12 : 0),
-        ),
-        child: view,
+      foregroundDecoration: BoxDecoration(
+        border: Border.all(color: theme.hairlineStrong),
+        borderRadius: radius,
       ),
+      child: view,
     );
     if (_expanded) {
       return Positioned(
@@ -412,15 +500,49 @@ class _MailHomeState extends State<MailHome> {
         ),
       );
     }
-    final height = _minimized
-        ? 48.0
-        : (constraints.maxHeight - 48).clamp(320.0, 640.0);
     return Positioned(
-      right: 24,
-      bottom: 0,
-      width: _minimized ? 320 : 560,
-      height: height,
+      right: composeWindowMargin,
+      bottom: composeWindowMargin,
+      width: _minimized ? 320 : composeWindowSize.width,
+      height: _minimized ? 48 : composeWindowHeight(constraints.maxHeight),
       child: window,
+    );
+  }
+
+  /// "Solo lista", like classic Gmail: the list takes the whole area; an
+  /// open message replaces it, with a back button that brings the list
+  /// back. The list stays built underneath (Offstage), so it comes back
+  /// scrolled where it was.
+  Widget _listOnly(BuildContext context) {
+    final unified = widget.unified;
+    return ListenableBuilder(
+      listenable: Listenable.merge([_c, ?unified]),
+      builder: (context, _) {
+        final reading = _reader.openUid != null;
+        return Stack(
+          children: [
+            Positioned.fill(
+              child: Offstage(
+                offstage: reading,
+                child: TickerMode(
+                  enabled: !reading,
+                  // As wide as the window: one line per message, like Gmail.
+                  child: _list(context, true, compact: true),
+                ),
+              ),
+            ),
+            if (reading)
+              Positioned.fill(
+                child: MessageView(
+                  key: ValueKey(_reader.account.id),
+                  controller: _reader,
+                  onBack: _reader.closeMessage,
+                  onCompose: (d) => _compose(context, d, true, _reader),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 
@@ -472,6 +594,10 @@ class _MailHomeState extends State<MailHome> {
                 widget.onShowUnified!();
               },
         unified: widget.unified != null,
+        onSettings: () {
+          Navigator.of(drawerContext).pop();
+          _openSettings(context);
+        },
       ),
     );
   }

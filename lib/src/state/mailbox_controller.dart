@@ -439,10 +439,23 @@ class MailboxController extends ChangeNotifier {
     );
   }
 
+  /// Whether [label] is the label of the folder at [path] (labels are
+  /// decoded, folder paths are in IMAP's modified UTF-7).
+  bool isFolderLabel(String label, [String? path]) =>
+      decodeModifiedUtf7(path ?? current.path) == label;
+
   /// Removes a Gmail label from a message: at once on screen and in the
   /// cache, then on the server; back as it was if the server refuses.
+  ///
+  /// Removing the label of the folder the message is in takes it out of
+  /// that folder, as in Gmail: it leaves the list like a move.
   Future<void> removeLabel(int uid, String label, {String? path}) {
     final folder = path ?? current.path;
+    if (isFolderLabel(label, folder)) {
+      return _removeFromList(folder, [
+        uid,
+      ], (s) => s.storeLabels(folder, [uid], [label], add: false));
+    }
     return _optimistic(
       folder,
       [uid],

@@ -1,8 +1,10 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kaamos_mail/src/ui/screens/mail_home.dart';
 import 'package:kaamos_project_ui/kaamos_project_ui.dart';
 
 import '../support/app_harness.dart';
+import '../support/fakes.dart';
 
 /// The box of the panel (the panel itself is a full-screen Align).
 Finder get drawerBox => find
@@ -91,7 +93,53 @@ void main() {
     });
   });
 
+  testLayout(
+    Layout.desktop,
+    'sidebar: title on top, Scrivi above the account',
+    (tester) async {
+      final app = AppHarness();
+      await app.addAccount();
+      await app.pump(tester, layout: Layout.desktop);
+
+      final title = tester.getRect(find.text('Kaamos Mail'));
+      final inbox = tester.getRect(find.text('Posta in arrivo').first);
+      final compose = tester.getRect(find.text('Scrivi'));
+      final account = tester.getRect(find.text(testAccount.email));
+      expect(title.top, lessThan(inbox.top), reason: 'name above the folders');
+      expect(
+        compose.top,
+        greaterThan(inbox.top),
+        reason: 'Scrivi at the bottom',
+      );
+      expect(
+        compose.bottom,
+        lessThan(account.top),
+        reason: 'above the account',
+      );
+    },
+  );
+
   group('desktop compose window', () {
+    testLayout(Layout.desktop, 'keeps its size when the app window shrinks', (
+      tester,
+    ) async {
+      final app = AppHarness();
+      await app.addAccount();
+      await app.pump(tester, layout: Layout.desktop);
+      await tapLabel(tester, 'Scrivi');
+
+      // A smaller window, still desktop: the compose window doesn't shrink.
+      tester.view.physicalSize = const Size(1000, 600);
+      await tester.pumpAndSettle();
+      expect(tester.getSize(composeWindow), composeWindowSize);
+
+      // Too short for it: it takes the height there is, fields scroll.
+      tester.view.physicalSize = const Size(1000, 420);
+      await tester.pumpAndSettle();
+      expect(tester.getSize(composeWindow), const Size(560, 420 - 32));
+      expect(tester.takeException(), isNull);
+    });
+
     testLayout(Layout.desktop, 'opens at the bottom right, over the reader', (
       tester,
     ) async {
@@ -101,9 +149,12 @@ void main() {
 
       await tapLabel(tester, 'Scrivi');
       final window = tester.getRect(composeWindow);
-      expect(window.right, 1280 - 24);
-      expect(window.bottom, 800);
+      // Floating: 16px from the right and bottom edges, like Gmail.
+      expect(window.right, 1280 - 16);
+      expect(window.bottom, 800 - 16);
       expect(window.width, 560);
+      // Fixed, like Gmail's: 560 x 480, whatever the window size.
+      expect(window.size, composeWindowSize);
       // The list stays usable beside it.
       expect(find.text('Oggetto 5'), findsOneWidget);
       // The title follows the subject.
@@ -128,6 +179,7 @@ void main() {
       await fill(tester, 'Testo del messaggio', 'Partiamo alle 7.');
       await tapLabel(tester, 'Riduci');
       expect(tester.getSize(composeWindow), const Size(320, 48));
+      expect(tester.getRect(composeWindow).bottom, 800 - 16);
       expect(find.bySemanticsLabel('Testo del messaggio'), findsNothing);
 
       // A message can be read meanwhile, and the window stays.

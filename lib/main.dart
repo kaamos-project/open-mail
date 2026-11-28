@@ -8,6 +8,8 @@ import 'src/data/account_repository.dart';
 import 'src/data/imap_mail_service.dart';
 import 'src/data/mail_cache.dart';
 import 'src/data/secret_store.dart';
+import 'src/data/settings_store.dart';
+import 'src/state/settings_controller.dart';
 import 'src/ui/platform.dart';
 
 Future<void> main() async {
@@ -26,6 +28,9 @@ Future<void> main() async {
     secrets: secrets,
   );
   final cache = MailCache.open('${dir.path}${sep}mail.db');
+  final settings = SettingsController(
+    FileSettingsStore(File('${dir.path}${sep}settings.json')),
+  );
 
   runApp(
     KaamosMailApp(
@@ -38,6 +43,7 @@ Future<void> main() async {
       ),
       files: const PlatformFileActions(),
       htmlBody: platformHtmlBody,
+      settings: settings,
       oauth: platformOAuthSignIn(),
     ),
   );

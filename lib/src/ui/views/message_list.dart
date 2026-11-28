@@ -17,7 +17,12 @@ class MessageList extends StatefulWidget {
     required this.onOpen,
     this.leading,
     this.trailing,
+    this.compact = false,
   });
+
+  /// One line per message, like Gmail's list (desktop "Solo lista"): see
+  /// [MessageRow.compact].
+  final bool compact;
 
   /// The mailbox state.
   final MailboxController controller;
@@ -174,7 +179,7 @@ class _MessageListState extends State<MessageList> {
         final m = c.messages[i];
         return MessageRow(
           message: m,
-          hideLabel: c.current.path,
+          compact: widget.compact,
           selected:
               m.uid == c.openUid &&
               (c.openPath ?? c.current.path) == c.current.path,
@@ -194,14 +199,17 @@ class MessageRow extends StatelessWidget {
     required this.selected,
     required this.onPressed,
     this.account,
-    this.hideLabel,
+    this.compact = false,
   });
+
+  /// One line, like Gmail's list on a wide screen: sender in a fixed
+  /// column, then labels, subject and preview, then the date at the right.
+  /// What doesn't fit ends with "…". Used by the desktop "Solo lista",
+  /// where the list is as wide as the window.
+  final bool compact;
 
   /// The message.
   final MessageSummary message;
-
-  /// The Gmail label not to show: the one of the folder being shown.
-  final String? hideLabel;
 
   /// In the unified Inbox: the message's account.
   final String? account;
@@ -227,8 +235,7 @@ class MessageRow extends StatelessWidget {
       date,
       if (m.flagged) 'Con stella',
       if (m.hasAttachments) 'Con allegati',
-      if (MailLabels.visible(m.labels, hideLabel) case final l
-          when l.isNotEmpty)
+      if (MailLabels.visible(m.labels) case final l when l.isNotEmpty)
         'Etichette ${l.join(', ')}',
       if (account != null) 'Account $account',
     ].join(', ');
@@ -239,6 +246,19 @@ class MessageRow extends StatelessWidget {
         semanticLabel: label,
         builder: (context, states) {
           final hovered = states.contains(WidgetState.hovered);
+          final background = selected
+              ? theme.surfaceElevated
+              : hovered
+              ? theme.surface
+              : null;
+          if (compact) {
+            return KaamosFocusRing(
+              visible: states.contains(WidgetState.focused),
+              color: theme.focusRing,
+              borderRadius: KaamosRadius.xs,
+              child: _compactRow(theme, background, sender, subject, date),
+            );
+          }
           return KaamosFocusRing(
             visible: states.contains(WidgetState.focused),
             color: theme.focusRing,
@@ -340,12 +360,9 @@ class MessageRow extends StatelessWidget {
                             ),
                           ),
                         ],
-                        if (MailLabels.visible(
-                          m.labels,
-                          hideLabel,
-                        ).isNotEmpty) ...[
+                        if (MailLabels.visible(m.labels).isNotEmpty) ...[
                           const SizedBox(height: 6),
-                          MailLabels(labels: m.labels, hide: hideLabel),
+                          MailLabels(labels: m.labels),
                         ],
                         if (account != null) ...[
                           const SizedBox(height: 4),
@@ -371,6 +388,134 @@ class MessageRow extends StatelessWidget {
   }
 }
 
+extension on MessageRow {
+  Widget _unreadDot(KaamosThemeData theme) => SizedBox(
+    width: 16,
+    height: 20,
+    child: message.seen
+        ? null
+        : Center(
+            child: Container(
+              width: 7,
+              height: 7,
+              decoration: BoxDecoration(
+                color: theme.accent,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+  );
+
+  /// The one-line row (see [MessageRow.compact]).
+  Widget _compactRow(
+    KaamosThemeData theme,
+    Color? background,
+    String sender,
+    String subject,
+    String date,
+  ) {
+    final m = message;
+    final unread = !m.seen;
+    final strong = unread
+        ? KaamosTypography.bodySmStrong
+        : KaamosTypography.bodySm;
+    final labels = MailLabels.visible(m.labels);
+    return Container(
+      key: ValueKey('compact-row-${m.uid}'),
+      height: 40,
+      decoration: BoxDecoration(
+        color: background,
+        border: Border(bottom: BorderSide(color: theme.hairline)),
+      ),
+      padding: const EdgeInsets.fromLTRB(12, 0, 16, 0),
+      child: Row(
+        children: [
+          _unreadDot(theme),
+          // A fixed column, so subjects line up like in Gmail.
+          SizedBox(
+            width: 200,
+            child: Text(
+              sender,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: strong.copyWith(color: theme.ink),
+            ),
+          ),
+          const SizedBox(width: 24),
+          if (labels.isNotEmpty) ...[
+            // Chips don't wrap here: at most 240px of them, the rest is
+            // cut. The full list is in the open message.
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 240),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                primary: false,
+                physics: const NeverScrollableScrollPhysics(),
+                child: MailLabels(labels: m.labels, wrap: false),
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
+          Expanded(
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: subject,
+                    style: strong.copyWith(
+                      color: unread ? theme.ink : theme.body,
+                    ),
+                  ),
+                  if (m.preview.isNotEmpty)
+                    TextSpan(
+                      text: ' – ${m.preview}',
+                      style: KaamosTypography.bodySm.copyWith(
+                        color: theme.mute,
+                      ),
+                    ),
+                ],
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 16),
+          if (account != null) ...[
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 160),
+              child: Text(
+                account!,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: KaamosTypography.captionSm.copyWith(color: theme.mute),
+              ),
+            ),
+            const SizedBox(width: 12),
+          ],
+          if (m.hasAttachments) ...[
+            MailIconView(MailIcon.paperclip, size: 14, color: theme.mute),
+            const SizedBox(width: 6),
+          ],
+          if (m.flagged) ...[
+            MailIconView(MailIcon.starFilled, size: 14, color: theme.accent),
+            const SizedBox(width: 6),
+          ],
+          Text(
+            date,
+            style:
+                (unread
+                        ? KaamosTypography.captionSm.copyWith(
+                            fontWeight: FontWeight.w600,
+                          )
+                        : KaamosTypography.captionSm)
+                    .copyWith(color: unread ? theme.ink : theme.mute),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Every account's Inbox in one list. No search or "Load more" for now: search
 /// inside the account.
 class UnifiedMessageList extends StatelessWidget {
@@ -381,7 +526,11 @@ class UnifiedMessageList extends StatelessWidget {
     required this.onOpen,
     this.leading,
     this.trailing,
+    this.compact = false,
   });
+
+  /// One line per message: see [MessageRow.compact].
+  final bool compact;
 
   /// The unified Inbox.
   final UnifiedInbox inbox;
@@ -477,6 +626,7 @@ class UnifiedMessageList extends StatelessWidget {
                         return MessageRow(
                           message: item.summary,
                           account: item.account.email,
+                          compact: compact,
                           selected:
                               open != null &&
                               open.accountId == item.account.id &&

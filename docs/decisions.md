@@ -67,6 +67,18 @@ The key choices behind Kaamos Mail, each with the alternatives and the trade-off
 **Why**: you can keep reading other messages, or copy from them, while writing.
 **Trade-off**: one window covers most uses with half the state to manage. Several side-by-side windows can come later without rework, because the window's state (`ComposeWindowControls`) is already outside `ComposeView`.
 
+## Settings in a JSON file
+
+**Decision** (November 2026): the app's settings live in `settings.json`, not in `shared_preferences`.
+**Why**: one format on every platform, readable and easy to back up, no plugin to mock in tests. It holds no secrets.
+**Trade-off**: we write the file ourselves (atomically, via a temporary file and a rename). See [Settings](settings.md).
+
+## Compose "as a page" stays inside the app
+
+**Decision** (November 2026, Alessio's choice): the "Pagina" compose mode on desktop opens inside the main window, in place of the list and the reader. Not a separate operating-system window like Outlook's.
+**Why**: Flutter's desktop multi-window support is not stable yet, and a second window would need its own copy of the app's state.
+**Trade-off**: you can't put the message being written side by side with the mail; the floating window covers that need. A real second window can come once Flutter supports it.
+
 ## Gmail and Outlook over IMAP + OAuth2
 
 **Decision**: XOAUTH2 over IMAP/SMTP with PKCE and a loopback redirect, like Thunderbird and Apple Mail. No Gmail API, no Microsoft Graph.

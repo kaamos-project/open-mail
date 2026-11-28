@@ -461,8 +461,8 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: "3d95193a2069ab3308ef785d7b689c509b335b65"
-      resolved-ref: "3d95193a2069ab3308ef785d7b689c509b335b65"
+      ref: "2ceb44bc5426cc9dca1e04bc8aa87bbb9b56c64f"
+      resolved-ref: "2ceb44bc5426cc9dca1e04bc8aa87bbb9b56c64f"
       url: "https://github.com/kaamos-project/open-ui-flutter"
     source: git
     version: "0.1.0-dev"

@@ -10,10 +10,11 @@ This page is the spec: when a feature moves or changes, update the row and its t
 
 | | Phone | Desktop |
 |---|---|---|
-| Structure | One page at a time: list → message → compose | Three columns: folders (240 px), list (340 px, 400 px from 1200 px), reader |
+| Structure | One page at a time: list → message → compose | Three columns: folders (240 px), list (340 px, 400 px from 1200 px), reader. Or "Solo lista": list or message in the whole area ([Settings](settings.md)) |
 | Folders | Hamburger button ("Cartelle") opens a drawer from the left: 85% of the screen, at most 320 px, over the dimmed list | Always visible on the left |
 | Account | Avatar at the right of the search bar (of the title in "Tutte le caselle"), like Google's apps | Row at the bottom of the folders column, always visible |
-| Compose | Its own page, from the floating "Scrivi" button | A window at the bottom right over the columns, like Gmail: minimize, expand, close; one at a time |
+| Compose | Its own page, from the floating "Scrivi" button | A window at the bottom right over the columns, like Gmail: minimize, expand, close; one at a time. Or a page in place of list and reader, in [Settings](settings.md) |
+| Settings | "Impostazioni" row at the bottom of the drawer | Gear to the right of the account row |
 
 ## Start and accounts
 
@@ -50,9 +51,10 @@ Only for servers that announce `X-GM-EXT-1` (Gmail): see [Gmail labels](gmail-la
 
 | Feature | Phone | Desktop | Test (`test/ui/`) |
 |---|---|---|---|
-| Labels as small chips on the row (system labels and the open folder's label left out), no X | Below the preview | Same | `gmail_labels_test`: labels show |
+| Labels as small chips on the row (all user labels, the open folder's too; system labels left out), no X | Below the preview | Same | `gmail_labels_test`: labels show |
 | Labels in the message, each with an X | Below the subject | Same | `gmail_labels_test`: labels show |
 | The X removes the label (optimistic; back with an error if the server refuses) | Message | Same | `gmail_labels_test`: the X removes, the server refuses |
+| Removing the open folder's label takes the message out of that folder (the phone goes back to the list) | Message | Same | `gmail_labels_test`: removing the open label |
 | "Etichette" section after the system folders; a label opens like a folder | Drawer | Folders column | `gmail_labels_test`: own section |
 | Labels changed on another device update on refresh | Same | Same | `gmail_labels_test`: changed elsewhere |
 | No labels section on other servers | Same | Same | `gmail_labels_test`: other servers |
@@ -74,8 +76,8 @@ Only for servers that announce `X-GM-EXT-1` (Gmail): see [Gmail labels](gmail-la
 
 | Feature | Phone | Desktop | Test (`test/ui/`) |
 |---|---|---|---|
-| New message from "Scrivi" | Floating button (`KaamosFab`) on the list; the label hides while scrolling down | Button at the top of the folders | `compose_test`: new message; `layout_test`: the Scrivi button shrinks |
-| Compose window: bottom right, 560 px; title follows the subject; the list and reader stay usable | — | Window | `layout_test`: opens at the bottom right |
+| New message from "Scrivi" | Floating button (`KaamosFab`) on the list; the label hides while scrolling down | Button at the bottom of the folders column, above the account; "Kaamos Mail" on top, like the phone's drawer | `compose_test`: new message; `layout_test`: the Scrivi button shrinks, sidebar order |
+| Compose window: floating 16 px from the bottom-right corner, fixed 560 × 480 px like Gmail's (shorter only if the app's window is), rounded corners and shadow; fields scroll when it is short; title follows the subject; the list and reader stay usable | — | Window | `layout_test`: opens at the bottom right; `mail_home_test`: height |
 | Minimize to the title bar keeping the text; restore; expand to a large window and back | — | Window title bar | `layout_test`: minimize keeps what was written, expand |
 | One window at a time: "Scrivi" brings back the open one; a reply or forward first asks about the open message | — | Window | `layout_test`: Scrivi again, a reply asks |
 | To, Cc / Bcc (shown on request), subject, body | Compose page | Window | `compose_test`: new message (From with several accounts: —) |
@@ -84,7 +86,18 @@ Only for servers that announce `X-GM-EXT-1` (Gmail): see [Gmail labels](gmail-la
 | Send | Toolbar | Bottom of the window, next to Attach | `compose_test`: new message, reply |
 | Close: empty closes at once; with text asks (delete, keep writing, save to Drafts) | Dialog | Same | `compose_test`: closing with text, empty message |
 
+## Settings
+
+| Feature | Phone | Desktop | Test (`test/ui/`) |
+|---|---|---|---|
+| Settings page, full page with "Indietro"; choices saved at once | From the drawer | From the gear next to the account | `settings_test`: settings open, save the choice |
+| "Carica sempre": remote images load with no banner | Same | Same | `settings_test`: "Carica sempre" |
+| "Solo lista": the open message takes the whole area, "Indietro" brings the list back where it was | — | Area right of the folders | `settings_test`: "Solo lista", switching layout |
+| "Solo lista" rows on one line, like Gmail: sender column, labels, subject – preview with "…", date | — | List | `settings_test`: one line per message |
+| Compose "Pagina": compose in place of list and reader, "Chiudi" goes back | — | Area right of the folders | `settings_test`: "Pagina" |
+
 ## See also
 
+- [Settings](settings.md)
 - [Testing](testing.md)
 - [Architecture](architecture.md)

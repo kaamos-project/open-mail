@@ -269,6 +269,12 @@ class FakeMailService implements MailService {
     required bool add,
   }) async {
     _check();
+    // Like Gmail: without its label, a message is no longer in that
+    // label's folder.
+    if (!add && labels.contains(path)) {
+      folders[path]!.messages.removeWhere((uid, _) => uids.contains(uid));
+      return;
+    }
     _update(
       path,
       uids,

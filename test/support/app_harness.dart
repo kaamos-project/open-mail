@@ -5,6 +5,8 @@ import 'package:kaamos_mail/src/core/models.dart';
 import 'package:kaamos_mail/src/data/mail_cache.dart';
 import 'package:kaamos_mail/src/data/oauth_client.dart';
 import 'package:kaamos_mail/src/data/secret_store.dart';
+import 'package:kaamos_mail/src/data/settings_store.dart';
+import 'package:kaamos_mail/src/state/settings_controller.dart';
 
 import 'fakes.dart';
 
@@ -77,6 +79,12 @@ class AppHarness {
   /// Attachments and links.
   final FakeFileActions files;
 
+  /// The settings, saved in memory: [settingsStore] shows what was saved.
+  final settingsStore = MemorySettingsStore();
+
+  /// The settings controller the app uses.
+  late final settings = SettingsController(settingsStore);
+
   /// Saved accounts.
   late final MemoryAccountRepository accounts;
 
@@ -103,6 +111,7 @@ class AppHarness {
         services: FakeMailServiceFactory(server),
         files: files,
         htmlBody: (context, doc, onLink) => const Text('HTML'),
+        settings: settings,
         oauth: oauth,
       ),
     );

@@ -39,6 +39,7 @@ Everything about how the app works lives in the wiki in [`docs/`](docs/README.md
 - [Sync and cache](docs/sync-and-cache.md)
 - [Reading HTML mail](docs/html-mail.md)
 - [Google and Microsoft sign-in](docs/oauth.md)
+- [Settings](docs/settings.md)
 - [Decisions](docs/decisions.md)
 
 ## License
