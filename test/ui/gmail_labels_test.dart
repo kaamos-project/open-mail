@@ -124,12 +124,36 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Riunione 1'), findsOneWidget);
-    // In "Lavoro" every message has that label: only the others show.
+    // Every label shows, the open folder's one too (Alessio's choice).
     expect(
-      find.bySemanticsLabel(RegExp('Etichette Viaggi/Norvegia')),
+      find.bySemanticsLabel(RegExp('Etichette Lavoro, Viaggi/Norvegia')),
       findsOneWidget,
     );
-    expect(find.bySemanticsLabel(RegExp('Etichette Lavoro')), findsNothing);
+  });
+
+  testBothLayouts('removing the open label takes the message out of it', (
+    tester,
+    layout,
+  ) async {
+    final app = gmail();
+    await app.addAccount();
+    await app.pump(tester, layout: layout);
+    await openFolders(tester, layout);
+    await tester.tap(
+      find.descendant(
+        of: find.byType(FolderList),
+        matching: find.text('Lavoro'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tapText(tester, 'Riunione 1');
+
+    // In the message, the folder's own label has its X too.
+    await tapLabel(tester, 'Togli etichetta Lavoro');
+    expect(find.text('Riunione 1'), findsNothing, reason: 'out of Lavoro');
+    expect(app.server.folders['Lavoro']!.messages, isEmpty);
+    // The phone goes back to the list, like after Archive.
+    expect(find.bySemanticsLabel('Togli etichetta Lavoro'), findsNothing);
   });
 
   testBothLayouts('labels changed elsewhere update on refresh', (

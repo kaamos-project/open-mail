@@ -83,16 +83,12 @@ class MailLabels extends StatelessWidget {
   const MailLabels({
     super.key,
     required this.labels,
-    this.hide,
     this.size = KaamosChipSize.small,
     this.onRemove,
   });
 
   /// All the message's labels, system ones included.
   final List<String> labels;
-
-  /// A label not to show.
-  final String? hide;
 
   /// Small in the list, medium in the open message.
   final KaamosChipSize size;
@@ -102,14 +98,13 @@ class MailLabels extends StatelessWidget {
   final ValueChanged<String>? onRemove;
 
   /// The labels this widget shows.
-  static List<String> visible(List<String> labels, [String? hide]) => [
-    for (final l in userLabels(labels))
-      if (l != hide) l,
-  ];
+  /// Every user label, also the one of the open folder: a message can
+  /// have several, and Alessio wants to see (and remove) all of them.
+  static List<String> visible(List<String> labels) => userLabels(labels);
 
   @override
   Widget build(BuildContext context) {
-    final shown = visible(labels, hide);
+    final shown = visible(labels);
     if (shown.isEmpty) return const SizedBox.shrink();
     final remove = onRemove;
     final chips = Wrap(

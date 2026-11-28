@@ -174,7 +174,6 @@ class _MessageListState extends State<MessageList> {
         final m = c.messages[i];
         return MessageRow(
           message: m,
-          hideLabel: c.current.path,
           selected:
               m.uid == c.openUid &&
               (c.openPath ?? c.current.path) == c.current.path,
@@ -194,14 +193,10 @@ class MessageRow extends StatelessWidget {
     required this.selected,
     required this.onPressed,
     this.account,
-    this.hideLabel,
   });
 
   /// The message.
   final MessageSummary message;
-
-  /// The Gmail label not to show: the one of the folder being shown.
-  final String? hideLabel;
 
   /// In the unified Inbox: the message's account.
   final String? account;
@@ -227,8 +222,7 @@ class MessageRow extends StatelessWidget {
       date,
       if (m.flagged) 'Con stella',
       if (m.hasAttachments) 'Con allegati',
-      if (MailLabels.visible(m.labels, hideLabel) case final l
-          when l.isNotEmpty)
+      if (MailLabels.visible(m.labels) case final l when l.isNotEmpty)
         'Etichette ${l.join(', ')}',
       if (account != null) 'Account $account',
     ].join(', ');
@@ -340,12 +334,9 @@ class MessageRow extends StatelessWidget {
                             ),
                           ),
                         ],
-                        if (MailLabels.visible(
-                          m.labels,
-                          hideLabel,
-                        ).isNotEmpty) ...[
+                        if (MailLabels.visible(m.labels).isNotEmpty) ...[
                           const SizedBox(height: 6),
-                          MailLabels(labels: m.labels, hide: hideLabel),
+                          MailLabels(labels: m.labels),
                         ],
                         if (account != null) ...[
                           const SizedBox(height: 4),

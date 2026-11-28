@@ -50,9 +50,10 @@ Only for servers that announce `X-GM-EXT-1` (Gmail): see [Gmail labels](gmail-la
 
 | Feature | Phone | Desktop | Test (`test/ui/`) |
 |---|---|---|---|
-| Labels as small chips on the row (system labels and the open folder's label left out), no X | Below the preview | Same | `gmail_labels_test`: labels show |
+| Labels as small chips on the row (all user labels, the open folder's too; system labels left out), no X | Below the preview | Same | `gmail_labels_test`: labels show |
 | Labels in the message, each with an X | Below the subject | Same | `gmail_labels_test`: labels show |
 | The X removes the label (optimistic; back with an error if the server refuses) | Message | Same | `gmail_labels_test`: the X removes, the server refuses |
+| Removing the open folder's label takes the message out of that folder (the phone goes back to the list) | Message | Same | `gmail_labels_test`: removing the open label |
 | "Etichette" section after the system folders; a label opens like a folder | Drawer | Folders column | `gmail_labels_test`: own section |
 | Labels changed on another device update on refresh | Same | Same | `gmail_labels_test`: changed elsewhere |
 | No labels section on other servers | Same | Same | `gmail_labels_test`: other servers |

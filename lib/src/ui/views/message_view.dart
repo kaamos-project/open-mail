@@ -292,13 +292,19 @@ class _MessageBodyState extends State<_MessageBody> {
               style: KaamosTypography.headingMd.copyWith(color: theme.ink),
             ),
           ),
-          if (MailLabels.visible(labels, path).isNotEmpty) ...[
+          if (MailLabels.visible(labels).isNotEmpty) ...[
             const SizedBox(height: 8),
             MailLabels(
               labels: labels,
-              hide: path,
               size: KaamosChipSize.medium,
-              onRemove: (label) => c.removeLabel(s.uid, label, path: path),
+              onRemove: (label) {
+                // Removing the label of the folder it is in takes the
+                // message out of that folder, as in Gmail: like Archive,
+                // go back to the list.
+                final leaves = c.isFolderLabel(label, path);
+                c.removeLabel(s.uid, label, path: path);
+                if (leaves) widget.onBack?.call();
+              },
             ),
           ],
           const SizedBox(height: 16),
